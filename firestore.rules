@@ -1,0 +1,101 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Default Deny Catch-all
+    match /{document=**} {
+      allow read, write: if false;
+    }
+
+    // Helper functions
+    function isValidId(id) {
+      return id is string && id.size() <= 128 && id.matches('^[a-zA-Z0-9_\\-]+$');
+    }
+
+    function incoming() {
+      return request.resource.data;
+    }
+
+    function existing() {
+      return resource.data;
+    }
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isOwner(userId) {
+      return isSignedIn() && request.auth.uid == userId;
+    }
+
+    // Validation for UserProfile
+    function isValidUserProfile(data) {
+      return data.keys().hasAll(['userId']) &&
+        data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid &&
+        (!('email' in data) || (data.email is string && data.email.size() <= 200)) &&
+        (!('displayName' in data) || (data.displayName is string && data.displayName.size() <= 150)) &&
+        (!('photoURL' in data) || (data.photoURL is string && data.photoURL.size() <= 500)) &&
+        (!('favorites' in data) || (data.favorites is list && data.favorites.size() <= 1000)) &&
+        (!('updatedAt' in data) || (data.updatedAt is string && data.updatedAt.size() <= 64));
+    }
+
+    // Validation for Herb
+    function isValidHerb(data) {
+      return data.keys().hasAll(['id', 'nameAr', 'scientific', 'userId']) &&
+        data.id is string && data.id.size() <= 128 &&
+        data.nameAr is string && data.nameAr.size() > 0 && data.nameAr.size() <= 150 &&
+        data.scientific is string && data.scientific.size() > 0 && data.scientific.size() <= 150 &&
+        data.userId is string && data.userId.size() <= 128 && data.userId == request.auth.uid &&
+        (!('nameEn' in data) || (data.nameEn is string && data.nameEn.size() <= 150)) &&
+        (!('family' in data) || (data.family is string && data.family.size() <= 100)) &&
+        (!('system' in data) || (data.system is string && data.system.size() <= 100)) &&
+        (!('target' in data) || (data.target is string && data.target.size() <= 300)) &&
+        (!('active' in data) || (data.active is string && data.active.size() <= 500)) &&
+        (!('dose' in data) || (data.dose is string && data.dose.size() <= 300)) &&
+        (!('preparation' in data) || (data.preparation is string && data.preparation.size() <= 600)) &&
+        (!('safety' in data) || (data.safety is string && data.safety.size() <= 600)) &&
+        (!('safetyLevel' in data) || (data.safetyLevel is string && data.safetyLevel.size() <= 100)) &&
+        (!('contraindications' in data) || (data.contraindications is string && data.contraindications.size() <= 600)) &&
+        (!('interactions' in data) || (data.interactions is string && data.interactions.size() <= 600)) &&
+        (!('historicalNote' in data) || (data.historicalNote is string && data.historicalNote.size() <= 1500)) &&
+        (!('references' in data) || (data.references is string && data.references.size() <= 1500)) &&
+        (!('description' in data) || (data.description is string && data.description.size() <= 4000)) &&
+        (!('pharmacology' in data) || (data.pharmacology is string && data.pharmacology.size() <= 4000)) &&
+        (!('benefits' in data) || (data.benefits is list && data.benefits.size() <= 50)) &&
+        (!('isCustom' in data) || (data.isCustom is bool)) &&
+        (!('createdAt' in data) || (data.createdAt is string && data.createdAt.size() <= 64));
+    }
+
+    // Health / Connection Test
+    match /test/{docId} {
+      allow get: if true;
+    }
+
+    // Users Collection and Sub-collections
+    match /users/{userId} {
+      allow get: if isOwner(userId);
+      allow list: if false;
+
+      allow create: if isOwner(userId) && isValidId(userId) && isValidUserProfile(incoming());
+
+      allow update: if isOwner(userId) && isValidId(userId) &&
+        isValidUserProfile(incoming()) &&
+        incoming().userId == existing().userId;
+
+      allow delete: if isOwner(userId);
+
+      // Custom Herbs subcollection
+      match /custom_herbs/{herbId} {
+        allow get, list: if isOwner(userId);
+
+        allow create: if isOwner(userId) && isValidId(herbId) && isValidHerb(incoming());
+
+        allow update: if isOwner(userId) && isValidId(herbId) &&
+          isValidHerb(incoming()) &&
+          incoming().id == existing().id &&
+          incoming().userId == existing().userId;
+
+        allow delete: if isOwner(userId) && isValidId(herbId);
+      }
+    }
+  }
+}

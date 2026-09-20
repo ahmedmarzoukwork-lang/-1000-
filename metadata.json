@@ -1,0 +1,6 @@
+{
+  "name": "Herbal-1000 | موسوعة 1000 عشبة الطبية",
+  "description": "الموسوعة والصيدلية النباتية الذكية لهوية 1000 عشبة (جُمعت لأجلك) مع محرك الذكاء الاصطناعي لإضافة النباتات والطباعة بصيغتي PDF و PNG وحفظ محلي متكامل.",
+  "requestFramePermissions": [],
+  "majorCapabilities": ["MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"]
+}

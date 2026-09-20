@@ -1,0 +1,61 @@
+{
+  "entities": {
+    "Herb": {
+      "title": "Herb",
+      "description": "Medical herb entry with clinical properties",
+      "type": "object",
+      "properties": {
+        "id": { "type": "string", "maxLength": 128 },
+        "nameAr": { "type": "string", "maxLength": 150 },
+        "nameEn": { "type": "string", "maxLength": 150 },
+        "scientific": { "type": "string", "maxLength": 150 },
+        "family": { "type": "string", "maxLength": 100 },
+        "system": { "type": "string", "maxLength": 100 },
+        "target": { "type": "string", "maxLength": 300 },
+        "active": { "type": "string", "maxLength": 500 },
+        "dose": { "type": "string", "maxLength": 300 },
+        "preparation": { "type": "string", "maxLength": 600 },
+        "safety": { "type": "string", "maxLength": 600 },
+        "safetyLevel": { "type": "string", "maxLength": 100 },
+        "contraindications": { "type": "string", "maxLength": 600 },
+        "interactions": { "type": "string", "maxLength": 600 },
+        "historicalNote": { "type": "string", "maxLength": 1500 },
+        "references": { "type": "string", "maxLength": 1500 },
+        "description": { "type": "string", "maxLength": 4000 },
+        "pharmacology": { "type": "string", "maxLength": 4000 },
+        "benefits": { "type": "array" },
+        "isCustom": { "type": "boolean" },
+        "userId": { "type": "string", "maxLength": 128 },
+        "createdAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["id", "nameAr", "scientific", "userId"]
+    },
+    "UserProfile": {
+      "title": "UserProfile",
+      "description": "User profile with preferences and favorite herb IDs",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string", "maxLength": 128 },
+        "email": { "type": "string", "maxLength": 200 },
+        "displayName": { "type": "string", "maxLength": 150 },
+        "photoURL": { "type": "string", "maxLength": 500 },
+        "favorites": {
+          "type": "array",
+          "description": "List of favorite herb IDs"
+        },
+        "updatedAt": { "type": "string", "maxLength": 64 }
+      },
+      "required": ["userId"]
+    }
+  },
+  "firestore": {
+    "/users/{userId}": {
+      "schema": { "$ref": "#/entities/UserProfile" },
+      "description": "User profile and synced preferences"
+    },
+    "/users/{userId}/custom_herbs/{herbId}": {
+      "schema": { "$ref": "#/entities/Herb" },
+      "description": "User specific custom herbs saved in cloud"
+    }
+  }
+}
