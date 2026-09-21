@@ -16,6 +16,7 @@ import {
   ChevronUp,
   Clock,
   Layers,
+  Bell,
 } from "lucide-react";
 import { exportElementAsPng } from "../utils/exportUtils";
 import { enrichHerbWithDetailedExplanation } from "../utils/herbEnricher";
@@ -26,6 +27,8 @@ interface HerbCardProps {
   onToggleFavorite: (id: string | number) => void;
   onOpenDetails: (herb: HerbItem) => void;
   onAddToCompare?: (herb: HerbItem) => void;
+  onOpenReminder?: (herbId: string | number) => void;
+  hasActiveReminder?: boolean;
 }
 
 export const HerbCard: React.FC<HerbCardProps> = ({
@@ -34,6 +37,8 @@ export const HerbCard: React.FC<HerbCardProps> = ({
   onToggleFavorite,
   onOpenDetails,
   onAddToCompare,
+  onOpenReminder,
+  hasActiveReminder,
 }) => {
   const [isExporting, setIsExporting] = useState(false);
   const [showFullDescription, setShowFullDescription] = useState(false);
@@ -105,6 +110,35 @@ export const HerbCard: React.FC<HerbCardProps> = ({
             <span className="text-[10px] font-mono font-bold text-[#8C7A53]">
               #{String(enrichedHerb.id).padStart(3, "0")}
             </span>
+
+            {/* Daily Reminder Button for Favorites */}
+            {onOpenReminder && (
+              <button
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onOpenReminder(enrichedHerb.id);
+                }}
+                title={
+                  hasActiveReminder
+                    ? "تعديل موعد التنبيه اليومي لهذه العشبة"
+                    : isFavorite
+                    ? "ضبط منبه يومي لتناول هذه العشبة"
+                    : "إضافة للمفضلة وضبط منبه يومي لتناولها"
+                }
+                className={`p-1 rounded-full transition no-export cursor-pointer ${
+                  hasActiveReminder
+                    ? "text-[#C59B27] hover:text-[#9A7B1C]"
+                    : "text-slate-300 hover:text-[#C59B27]"
+                }`}
+              >
+                <Bell
+                  className={`w-3.5 h-3.5 ${
+                    hasActiveReminder ? "fill-[#C59B27] text-[#C59B27]" : ""
+                  }`}
+                />
+              </button>
+            )}
+
             <button
               onClick={(e) => {
                 e.stopPropagation();
@@ -224,9 +258,21 @@ export const HerbCard: React.FC<HerbCardProps> = ({
           )}
         </div>
 
+        {/* Classical Arabic & Prophetic Medicine Heritage */}
+        {enrichedHerb.arabicHeritageCitation && (
+          <div className="mt-2 text-[10px] font-['Amiri'] text-[#63480B] bg-[#FFFBF0] p-2 rounded-lg border border-[#E8DCBF]">
+            <span className="font-bold text-[#8C6D1F]">📜 في الطب النبوي وابن سينا: </span>
+            <span className="leading-tight">
+              {showFullDescription
+                ? enrichedHerb.arabicHeritageCitation
+                : enrichedHerb.arabicHeritageCitation.slice(0, 115) + (enrichedHerb.arabicHeritageCitation.length > 115 ? "..." : "")}
+            </span>
+          </div>
+        )}
+
         {/* Egyptian Heritage Note if exists */}
         {enrichedHerb.historicalNote && (
-          <div className="mt-2 text-[10px] font-['Amiri'] text-[#785E21] bg-[#FFF8E7] p-1.5 rounded-lg border border-[#F0DFB3] line-clamp-1 italic">
+          <div className="mt-1.5 text-[10px] font-['Amiri'] text-[#785E21] bg-[#FFF8E7] p-1.5 rounded-lg border border-[#F0DFB3] line-clamp-1 italic">
             🏺 <span className="font-bold">تراث الفراعنة:</span> {enrichedHerb.historicalNote}
           </div>
         )}

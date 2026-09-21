@@ -12,6 +12,38 @@ import {
 
 export const GLOBAL_SCIENTIFIC_SOURCES = [
   {
+    authority: "كتاب الطب النبوي",
+    authorityEn: "Prophetic Medicine (Ibn Qayyim & al-Dhahabi)",
+    document: "أحاديث التداوي بالأعشاب والهدْي الطبي النبوي",
+    documentEn: "Authentic Sunnah, Nigella, Senna, Costus & Herbal Remedies",
+    icon: Scroll,
+    tag: "تراث الطب النبوي الشريف",
+  },
+  {
+    authority: "موسوعة القانون في الطب",
+    authorityEn: "The Canon of Medicine (Ibn Sina / Avicenna)",
+    document: "دستور الأدوية المفردة والمركبة وأمزجة الأعشاب",
+    documentEn: "Materia Medica, Herbal Temperaments & Systemic Actions",
+    icon: BookOpen,
+    tag: "المرجع الأعظم للشيخ الرئيس",
+  },
+  {
+    authority: "الجامع لمفردات الأدوية والأغذية",
+    authorityEn: "Ibn al-Baytar Pharmacopoeia (Andalusia)",
+    document: "أعظم معجم نباتي وتطبيقي في تاريخ الطب العربي",
+    documentEn: "Compendium of Simple Medicaments and Foods (1400+ Botanicals)",
+    icon: FileCheck2,
+    tag: "شيخ العشابين الأندلسي",
+  },
+  {
+    authority: "تذكرة أولي الألباب والجامع للعجب",
+    authorityEn: "Tadhkirat Dawud al-Antaki",
+    document: "تحقيق خواص الأعشاب وتعديل الأمزجة وعلاج العلل",
+    documentEn: "Classical Herbal Formulary & Therapeutic Preparation",
+    icon: Scroll,
+    tag: "مرجع الحكماء القدامى",
+  },
+  {
     authority: "منظمة الصحة العالمية",
     authorityEn: "World Health Organization (WHO)",
     document: "دراسات WHO النباتية السريرية",

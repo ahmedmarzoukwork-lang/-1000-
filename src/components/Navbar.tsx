@@ -15,6 +15,7 @@ import {
   Cloud,
   LogOut,
   LogIn,
+  Bell,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -29,6 +30,8 @@ interface NavbarProps {
   onLogin: () => void;
   onLogout: () => void;
   isSyncing?: boolean;
+  onOpenReminders?: () => void;
+  activeRemindersCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -43,6 +46,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   onLogin,
   onLogout,
   isSyncing,
+  onOpenReminders,
+  activeRemindersCount = 0,
 }) => {
   return (
     <header className="relative bg-[#132B20] text-[#FBF7EE] border-b-2 border-[#C59B27] shadow-md no-print">
@@ -111,6 +116,23 @@ export const Navbar: React.FC<NavbarProps> = ({
               <LogIn className="w-3.5 h-3.5 text-[#C59B27]" />
               <span className="hidden sm:inline">دخول Google (سحابي)</span>
               <span className="sm:hidden">دخول</span>
+            </button>
+          )}
+
+          {/* Daily Reminders Button */}
+          {onOpenReminders && (
+            <button
+              onClick={onOpenReminders}
+              title="منبه الأعشاب اليومي بناءً على قائمة مفضلاتك"
+              className="relative flex items-center gap-1.5 bg-[#1A382B] hover:bg-[#234A39] border border-[#C59B27]/40 text-[#F5DC7D] font-bold px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl transition text-[11px] sm:text-xs shadow-sm cursor-pointer active:scale-95"
+            >
+              <Bell className="w-3.5 h-3.5 text-[#C59B27]" />
+              <span className="hidden sm:inline">منبه الأعشاب</span>
+              {activeRemindersCount > 0 && (
+                <span className="bg-[#C59B27] text-[#132B20] text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                  {activeRemindersCount}
+                </span>
+              )}
             </button>
           )}
 

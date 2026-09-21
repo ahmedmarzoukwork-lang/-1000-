@@ -20,6 +20,7 @@
         "contraindications": { "type": "string", "maxLength": 600 },
         "interactions": { "type": "string", "maxLength": 600 },
         "historicalNote": { "type": "string", "maxLength": 1500 },
+        "arabicHeritageCitation": { "type": "string", "maxLength": 3000 },
         "references": { "type": "string", "maxLength": 1500 },
         "description": { "type": "string", "maxLength": 4000 },
         "pharmacology": { "type": "string", "maxLength": 4000 },
@@ -42,6 +43,10 @@
         "favorites": {
           "type": "array",
           "description": "List of favorite herb IDs"
+        },
+        "reminders": {
+          "type": "array",
+          "description": "Daily reminders for favorite herbs"
         },
         "updatedAt": { "type": "string", "maxLength": 64 }
       },

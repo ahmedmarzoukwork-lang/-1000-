@@ -257,13 +257,13 @@ export const AddHerbAiView: React.FC<AddHerbAiViewProps> = ({
               إضافة وتوثيق النباتات بالذكاء الاصطناعي
             </h2>
             <p className="text-xs sm:text-sm text-[#F5DC7D] font-['Amiri']">
-              موسوعة "1000 عشبة" الذكية • موثقة من أهم الدساتير الطبية العالمية وتراث بردية إيبرس
+              موسوعة "1000 عشبة" الذكية • موثقة من أمهات كتب التراث الطبي العربي (الطب النبوي، القانون لابن سينا) والدساتير العالمية
             </p>
           </div>
         </div>
 
         <p className="text-xs sm:text-sm text-[#E2D6B5] leading-relaxed max-w-2xl mt-3">
-          اكتب اسم أي نبتة أو عشبة أو بهار أو مستخلص نباتي؛ ليقوم نموذج الذكاء الاصطناعي باستحضار كافة المعلومات السريرية، المواد الفعالة، الجرعات، التداخلات، والتراث التاريخي من دساتير منظمة الصحة العالمية (WHO) والهيئة الأوروبية (EMA) واللجنة الألمانية E.
+          اكتب اسم أي نبتة أو عشبة أو بهار أو مستخلص نباتي؛ ليقوم نموذج الذكاء الاصطناعي باستحضار كافة المعلومات السريرية والمواد الفعالة ومطابقتها مع أمهات كتب التراث العربي والإسلامي (كتاب الطب النبوي لابن القيم، موسوعة القانون في الطب لابن سينا، الجامع لابن البيطار) جنباً إلى جنب مع دساتير منظمة الصحة العالمية (WHO) والهيئة الأوروبية (EMA) واللجنة الألمانية E.
         </p>
       </div>
 
@@ -492,9 +492,27 @@ export const AddHerbAiView: React.FC<AddHerbAiViewProps> = ({
             )}
           </div>
 
+          {/* Classical Arabic & Prophetic Medicine Heritage Citation */}
+          {generatedHerb.arabicHeritageCitation && (
+            <div className="bg-[#FAF5E8] p-4 rounded-2xl border-2 border-[#C59B27]/60 text-[#3D2E0B]">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="font-bold text-xs text-[#73520A] flex items-center gap-1.5 font-['Cairo']">
+                  <span>📜</span>
+                  <span>التراث الطبي العربي والطب النبوي (ابن القيم وابن سينا):</span>
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C59B27] text-[#132B20]">
+                  أمهات كتب التراث
+                </span>
+              </div>
+              <p className="font-['Amiri'] text-sm leading-relaxed text-[#4A3810] bg-[#FFFBF2] p-3 rounded-xl border border-[#E8DCBF]">
+                {generatedHerb.arabicHeritageCitation}
+              </p>
+            </div>
+          )}
+
           {generatedHerb.historicalNote && (
             <div className="bg-[#FFF9EA] p-4 rounded-2xl border border-[#F0DDB1] text-xs text-[#654E18] font-['Amiri'] text-sm">
-              <span className="font-bold block mb-1">📜 لمحة تاريخية / تراث الفراعنة:</span>
+              <span className="font-bold block mb-1">🏺 لمحة تاريخية / تراث الفراعنة:</span>
               <p>{generatedHerb.historicalNote}</p>
             </div>
           )}

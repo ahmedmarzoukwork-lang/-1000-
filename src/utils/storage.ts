@@ -1,10 +1,11 @@
-import { HerbItem } from "../types";
+import { HerbItem, DailyReminder } from "../types";
 import { INITIAL_HERBS } from "../data/initialHerbs";
 import { enrichHerbsList } from "./herbEnricher";
 
 const STORAGE_KEY_HERBS = "1000_herbs_pharmacy_catalog_v1";
 const STORAGE_KEY_FAVORITES = "1000_herbs_favorites_v1";
 const STORAGE_KEY_CUSTOM_LOGO = "1000_herbs_custom_logo_v1";
+const STORAGE_KEY_REMINDERS = "1000_herbs_daily_reminders_v1";
 
 export function loadHerbsFromStorage(): HerbItem[] {
   try {
@@ -90,3 +91,21 @@ export function exportDatabaseAsJsonFile(herbs: HerbItem[]): void {
   downloadAnchor.click();
   downloadAnchor.remove();
 }
+
+export function loadRemindersFromStorage(): DailyReminder[] {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY_REMINDERS);
+    return raw ? JSON.parse(raw) : [];
+  } catch {
+    return [];
+  }
+}
+
+export function saveRemindersToStorage(reminders: DailyReminder[]): void {
+  try {
+    localStorage.setItem(STORAGE_KEY_REMINDERS, JSON.stringify(reminders));
+  } catch (err) {
+    console.error("Failed to save daily reminders:", err);
+  }
+}
+

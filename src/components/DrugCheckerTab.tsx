@@ -277,6 +277,19 @@ export const DrugCheckerTab: React.FC<DrugCheckerTabProps> = ({
               </div>
             )}
 
+            {/* Classical Arabic Heritage Note (ابن سينا والطب النبوي) */}
+            {result.traditionalNote && (
+              <div className="bg-[#FAF5E8] p-3.5 rounded-2xl border-2 border-[#C59B27]/50 text-xs">
+                <strong className="block text-[#73520A] font-bold mb-1 flex items-center gap-1.5 font-['Cairo']">
+                  <span>📜</span>
+                  <span>توجيهات ابن سينا والطب النبوي لإصلاح الغائلة ومزاج البدن:</span>
+                </strong>
+                <p className="text-[#4A3810] font-['Amiri'] text-sm leading-relaxed bg-[#FFFBF2] p-2.5 rounded-xl border border-[#E8DCBF]">
+                  {result.traditionalNote}
+                </p>
+              </div>
+            )}
+
             {/* Authoritative Global Citations */}
             <div className="bg-[#FAF4E6] p-3.5 rounded-2xl border border-[#D9C496] text-xs">
               <strong className="block text-[#132B20] font-bold mb-1 flex items-center gap-1.5">

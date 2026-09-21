@@ -11,6 +11,7 @@ import {
   CheckCircle,
   X,
   BookOpen,
+  Bell,
 } from "lucide-react";
 import { exportElementAsPng } from "../utils/exportUtils";
 import { BrandLogo } from "./BrandLogo";
@@ -24,6 +25,9 @@ interface CatalogTabProps {
   onNavigateAddAi: () => void;
   onAddToCompare: (herb: HerbItem) => void;
   customLogoUrl: string | null;
+  onOpenReminder?: (herbId?: string | number) => void;
+  remindersHerbIds?: (string | number)[];
+  activeRemindersCount?: number;
 }
 
 const SYSTEM_CATEGORIES = [
@@ -45,6 +49,9 @@ export const CatalogTab: React.FC<CatalogTabProps> = ({
   onNavigateAddAi,
   onAddToCompare,
   customLogoUrl,
+  onOpenReminder,
+  remindersHerbIds,
+  activeRemindersCount,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSystem, setSelectedSystem] = useState("جميع الأجهزة");
@@ -205,6 +212,18 @@ export const CatalogTab: React.FC<CatalogTabProps> = ({
               <span>المفضلة فقط ({favorites.length})</span>
             </button>
 
+            {/* Daily Reminders for Favorites Shortcut */}
+            {onOpenReminder && (
+              <button
+                onClick={() => onOpenReminder()}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition border bg-[#FAF4E6] text-[#785E21] border-[#D8C7A0] hover:bg-[#F2E5C5] active:scale-95"
+                title="جدول التنبيهات اليومية لتناول الأعشاب المفضلة"
+              >
+                <Bell className="w-3.5 h-3.5 text-[#C59B27]" />
+                <span>منبه المفضلة {activeRemindersCount ? `(${activeRemindersCount})` : ""}</span>
+              </button>
+            )}
+
             {/* Safety Filter */}
             <select
               value={safetyFilter}
@@ -290,6 +309,8 @@ export const CatalogTab: React.FC<CatalogTabProps> = ({
                 onToggleFavorite={onToggleFavorite}
                 onOpenDetails={onOpenDetails}
                 onAddToCompare={onAddToCompare}
+                onOpenReminder={onOpenReminder}
+                hasActiveReminder={remindersHerbIds?.includes(herb.id)}
               />
             ))}
           </div>

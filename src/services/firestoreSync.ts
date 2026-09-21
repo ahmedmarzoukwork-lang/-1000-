@@ -8,7 +8,7 @@ import {
   Unsubscribe,
 } from "firebase/firestore";
 import { db, handleFirestoreError, OperationType } from "../firebase";
-import { HerbItem } from "../types";
+import { HerbItem, DailyReminder } from "../types";
 
 export interface UserCloudProfile {
   userId: string;
@@ -16,6 +16,7 @@ export interface UserCloudProfile {
   displayName?: string;
   photoURL?: string;
   favorites?: (string | number)[];
+  reminders?: DailyReminder[];
   updatedAt?: string;
 }
 
@@ -32,6 +33,9 @@ export async function syncUserProfile(profile: UserCloudProfile): Promise<void> 
         ...(profile.photoURL && { photoURL: profile.photoURL.slice(0, 500) }),
         ...(profile.favorites && {
           favorites: profile.favorites.slice(0, 1000).map(String),
+        }),
+        ...(profile.reminders && {
+          reminders: profile.reminders.slice(0, 100),
         }),
         updatedAt: new Date().toISOString(),
       },
@@ -54,6 +58,27 @@ export async function syncFavoritesToCloud(
       {
         userId,
         favorites: favorites.slice(0, 1000).map(String),
+        updatedAt: new Date().toISOString(),
+      },
+      { merge: true }
+    );
+  } catch (error) {
+    handleFirestoreError(error, OperationType.UPDATE, path);
+  }
+}
+
+export async function syncRemindersToCloud(
+  userId: string,
+  reminders: DailyReminder[]
+): Promise<void> {
+  const path = `users/${userId}`;
+  try {
+    const docRef = doc(db, "users", userId);
+    await setDoc(
+      docRef,
+      {
+        userId,
+        reminders: reminders.slice(0, 100),
         updatedAt: new Date().toISOString(),
       },
       { merge: true }
@@ -93,6 +118,9 @@ export async function saveCustomHerbToCloud(
       }),
       ...(herb.historicalNote && {
         historicalNote: herb.historicalNote.slice(0, 1500),
+      }),
+      ...(herb.arabicHeritageCitation && {
+        arabicHeritageCitation: herb.arabicHeritageCitation.slice(0, 3000),
       }),
       ...(herb.references && { references: herb.references.slice(0, 1500) }),
       ...(herb.description && { description: herb.description.slice(0, 4000) }),

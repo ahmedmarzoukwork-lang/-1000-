@@ -16,6 +16,7 @@ import {
   Activity,
   Layers,
   HeartPulse,
+  Bell,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import { exportElementAsPng } from "../utils/exportUtils";
@@ -25,12 +26,14 @@ interface HerbDetailModalProps {
   herb: HerbItem | null;
   onClose: () => void;
   customLogoUrl: string | null;
+  onSetReminder?: (herb: HerbItem) => void;
 }
 
 export const HerbDetailModal: React.FC<HerbDetailModalProps> = ({
   herb,
   onClose,
   customLogoUrl,
+  onSetReminder,
 }) => {
   const [isExportingPng, setIsExportingPng] = useState(false);
   const [exportedSuccess, setExportedSuccess] = useState(false);
@@ -72,6 +75,21 @@ export const HerbDetailModal: React.FC<HerbDetailModalProps> = ({
           </div>
 
           <div className="flex items-center gap-2">
+            {/* Daily Reminder Button */}
+            {onSetReminder && (
+              <button
+                onClick={() => {
+                  onClose();
+                  onSetReminder(enrichedHerb);
+                }}
+                className="flex items-center gap-1.5 bg-[#1C3E2F] hover:bg-[#25523E] border border-[#C59B27]/50 text-[#F5DC7D] font-bold px-3 py-1.5 rounded-xl text-xs transition shadow-sm active:scale-95 cursor-pointer"
+                title="ضبط منبه يومي لموعد تناول هذه العشبة"
+              >
+                <Bell className="w-3.5 h-3.5 text-[#C59B27]" />
+                <span className="hidden sm:inline">تنبيه يومي</span>
+              </button>
+            )}
+
             {/* Export as PNG Button */}
             <button
               onClick={handleExportPng}
@@ -279,11 +297,35 @@ export const HerbDetailModal: React.FC<HerbDetailModalProps> = ({
             )}
           </div>
 
-          {/* Section 8: Egyptian & Traditional Heritage */}
+          {/* Section 8: Classical Arabic & Islamic Medicine Heritage (الطب النبوي وابن سينا) */}
+          {enrichedHerb.arabicHeritageCitation && (
+            <div className="bg-[#FAF5E8] p-5 rounded-2xl border-2 border-[#C59B27]/60 text-[#3D2E0B] shadow-sm relative overflow-hidden">
+              <div className="absolute top-0 left-0 w-24 h-24 bg-[#C59B27]/5 rounded-br-full pointer-events-none" />
+              <div className="flex items-center justify-between gap-2 mb-2">
+                <div className="flex items-center gap-2 font-bold text-sm text-[#73520A] font-['Cairo']">
+                  <span className="text-base">📜</span>
+                  <span>التراث الطبي العربي والإسلامي (الطب النبوي وابن سينا):</span>
+                </div>
+                <span className="text-[10px] font-bold px-2.5 py-0.5 rounded-full bg-[#C59B27] text-[#132B20]">
+                  أمهات كتب التراث
+                </span>
+              </div>
+              <p className="text-xs sm:text-sm leading-relaxed font-['Amiri'] text-[#4A3810] bg-[#FFFBF2] p-3.5 rounded-xl border border-[#E8DCBF]">
+                {enrichedHerb.arabicHeritageCitation}
+              </p>
+              <div className="mt-2.5 flex flex-wrap items-center gap-2 text-[10px] font-semibold text-[#8C6D1F]">
+                <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md">📖 كتاب الطب النبوي (ابن القيم / الذهبي)</span>
+                <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md">📖 القانون في الطب (الشيخ الرئيس ابن سينا)</span>
+                <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md">📖 الجامع لمفردات الأدوية (ابن البيطار)</span>
+              </div>
+            </div>
+          )}
+
+          {/* Section 9: Egyptian & Ancient Herbal Heritage */}
           {enrichedHerb.historicalNote && (
             <div className="bg-[#FFF9EA] p-4 rounded-2xl border border-[#F0DDB1] text-[#654E18]">
               <div className="flex items-center gap-1.5 font-bold text-xs text-[#7B5F19] mb-1">
-                <span>🏺 التراث الصيدلاني وطب الفراعنة:</span>
+                <span>🏺 التراث الصيدلاني وطب الفراعنة وبردية إيبرس:</span>
               </div>
               <p className="text-xs leading-relaxed font-['Amiri'] text-sm">
                 {enrichedHerb.historicalNote}
@@ -291,22 +333,25 @@ export const HerbDetailModal: React.FC<HerbDetailModalProps> = ({
             </div>
           )}
 
-          {/* Section 9: Authoritative Global Citations & Pharmacopoeias */}
+          {/* Section 10: Authoritative Arabic & Global Citations */}
           <div className="bg-[#FAF4E6] p-4 rounded-2xl border-2 border-[#D9C496] text-[#3A3018]">
             <div className="flex items-center justify-between gap-2 mb-1.5">
               <div className="flex items-center gap-1.5 font-extrabold text-xs text-[#132B20] font-['Cairo']">
                 <BookMarked className="w-4 h-4 text-[#C59B27]" />
-                <span>المراجع والدساتير العالمية المعتمدة (Global Certified References):</span>
+                <span>المراجع والدساتير المعتمدة (Certified Classical & Global References):</span>
               </div>
               <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#132B20] text-[#F5DC7D]">
-                موثق سريرياً
+                تراثية وسريرية موثقة
               </span>
             </div>
             <p className="text-xs text-[#4F4225] leading-relaxed font-medium">
               {enrichedHerb.references ||
-                "دراسات منظمة الصحة العالمية (WHO Monographs on Selected Medicinal Plants)، دستور اللجنة الألمانية (German Commission E)، الهيئة الأوروبية للأدوية (EMA/HMPC)، دستور الأدوية الأمريكي (USP-NF)، وبردية إيبرس الطبية المصرية (Ebers Papyrus c. 1550 BCE)."}
+                "كتاب الطب النبوي (ابن القيم)، كتاب القانون في الطب (ابن سينا)، الجامع لمفردات الأدوية والأغذية (ابن البيطار)، دراسات منظمة الصحة العالمية (WHO Monographs)، دستور اللجنة الألمانية (German Commission E)، الهيئة الأوروبية للأدوية (EMA/HMPC)، وبردية إيبرس الطبية المصرية."}
             </p>
-            <div className="mt-2 pt-2 border-t border-[#E5D7B7] flex flex-wrap gap-2 text-[10px] text-[#7A6B48]">
+            <div className="mt-2.5 pt-2 border-t border-[#E5D7B7] flex flex-wrap gap-1.5 text-[10px] text-[#7A6B48]">
+              <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md font-semibold text-[#5A4513]">✓ الطب النبوي (ابن القيم)</span>
+              <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md font-semibold text-[#5A4513]">✓ القانون في الطب (ابن سينا)</span>
+              <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md font-semibold text-[#5A4513]">✓ مفردات الأدوية (ابن البيطار)</span>
               <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md font-semibold">✓ WHO Monographs Vol 1-4</span>
               <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md font-semibold">✓ German Commission E</span>
               <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md font-semibold">✓ EMA/HMPC Certified</span>

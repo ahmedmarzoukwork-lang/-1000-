@@ -274,6 +274,24 @@ export const RemedyAdvisorTab: React.FC<RemedyAdvisorTabProps> = ({
             </div>
           )}
 
+          {/* Classical Arabic Heritage & Prophetic Medicine Advice */}
+          {protocol.arabicHeritageAdvice && (
+            <div className="bg-[#FAF5E8] p-4 rounded-2xl border-2 border-[#C59B27]/60 text-xs text-[#3D2E0B]">
+              <div className="flex items-center justify-between gap-2 mb-1.5">
+                <span className="font-bold text-xs text-[#73520A] flex items-center gap-1.5 font-['Cairo']">
+                  <span>📜</span>
+                  <span>هدي الطب النبوي وتوجيهات ابن سينا في القانون للحالة:</span>
+                </span>
+                <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#C59B27] text-[#132B20]">
+                  حكمة التراث العربي
+                </span>
+              </div>
+              <p className="font-['Amiri'] text-sm leading-relaxed text-[#4A3810] bg-[#FFFBF2] p-3 rounded-xl border border-[#E8DCBF]">
+                {protocol.arabicHeritageAdvice}
+              </p>
+            </div>
+          )}
+
           {/* Authoritative Global References */}
           <div className="bg-[#FAF4E6] p-4 rounded-2xl border border-[#D9C496] text-xs text-[#3E3218]">
             <div className="flex items-center gap-1.5 font-bold text-[#132B20] mb-1">

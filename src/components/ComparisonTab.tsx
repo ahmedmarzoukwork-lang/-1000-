@@ -230,6 +230,19 @@ export const ComparisonTab: React.FC<ComparisonTabProps> = ({
                   {herb2.safety}
                 </td>
               </tr>
+              {herb1.arabicHeritageCitation || herb2.arabicHeritageCitation ? (
+                <tr className="bg-[#FFFBF0]/60">
+                  <td className="p-3 font-bold bg-[#F4EEDB] text-[#132B20]">
+                    التراث الطبي العربي (الطب النبوي وابن سينا)
+                  </td>
+                  <td className="p-3 text-[#543E10] font-['Amiri'] text-xs leading-relaxed">
+                    {herb1.arabicHeritageCitation || "—"}
+                  </td>
+                  <td className="p-3 text-[#543E10] font-['Amiri'] text-xs leading-relaxed">
+                    {herb2.arabicHeritageCitation || "—"}
+                  </td>
+                </tr>
+              ) : null}
               {herb1.historicalNote || herb2.historicalNote ? (
                 <tr>
                   <td className="p-3 font-bold bg-[#F4EEDB] text-[#132B20]">التراث الفرعوني</td>
