@@ -249,8 +249,9 @@ export async function importHerbsFromSheets(
     const row = rows[i];
     if (!row || row.length === 0 || !row[1]) continue;
 
+    const rawPrice = row[16] ? parseFloat(row[16]) : undefined;
     const herb: HerbItem = {
-      id: row[0] || `sheet-${Date.now()}-${i}`,
+      id: row[0] && String(row[0]).trim() !== "" ? String(row[0]).trim() : `sheet_${Date.now()}_${i}`,
       nameAr: row[1] || "",
       scientific: row[2] || "",
       nameEn: row[3] || "",
@@ -266,6 +267,9 @@ export async function importHerbsFromSheets(
       interactions: row[13] || "",
       historicalNote: row[14] || "",
       references: row[15] || "تم الاستيراد من Google Sheets",
+      price: rawPrice && !isNaN(rawPrice) && rawPrice > 0 ? Math.round(rawPrice) : undefined,
+      description: row[17] || undefined,
+      pharmacology: row[18] || undefined,
       isCustom: true,
       addedAt: new Date().toISOString(),
     };

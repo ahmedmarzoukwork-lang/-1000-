@@ -16,6 +16,9 @@ import {
   LogOut,
   LogIn,
   Bell,
+  ShoppingBag,
+  Coins,
+  MessageCircle,
 } from "lucide-react";
 
 interface NavbarProps {
@@ -32,6 +35,8 @@ interface NavbarProps {
   isSyncing?: boolean;
   onOpenReminders?: () => void;
   activeRemindersCount?: number;
+  onOpenCart?: () => void;
+  cartCount?: number;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -48,6 +53,8 @@ export const Navbar: React.FC<NavbarProps> = ({
   isSyncing,
   onOpenReminders,
   activeRemindersCount = 0,
+  onOpenCart,
+  cartCount = 0,
 }) => {
   return (
     <header className="relative bg-[#132B20] text-[#FBF7EE] border-b-2 border-[#C59B27] shadow-md no-print">
@@ -136,6 +143,21 @@ export const Navbar: React.FC<NavbarProps> = ({
             </button>
           )}
 
+          {/* Shopping Cart Button */}
+          {onOpenCart && (
+            <button
+              onClick={onOpenCart}
+              title="سلة مشتريات الأعشاب المربوطة بالواتساب"
+              className="relative flex items-center gap-1.5 bg-[#C59B27] hover:bg-[#D4AF37] text-[#132B20] font-black px-2.5 sm:px-3 py-1.5 sm:py-2 rounded-xl transition text-[11px] sm:text-xs shadow-md cursor-pointer active:scale-95"
+            >
+              <ShoppingBag className="w-3.5 h-3.5 text-[#132B20]" />
+              <span className="hidden sm:inline">السلة</span>
+              <span className="bg-[#132B20] text-[#F5DC7D] text-[10px] font-black px-1.5 py-0.5 rounded-full leading-none">
+                {cartCount}
+              </span>
+            </button>
+          )}
+
           {/* Progress / Catalog Counter */}
           <div className="bg-[#0E2018] border border-[#C59B27]/40 px-3 py-1.5 rounded-xl text-center shadow-inner">
             <span className="text-[#C49B28] block text-[10px] font-bold">الموسوعة الموثقة</span>
@@ -196,6 +218,30 @@ export const Navbar: React.FC<NavbarProps> = ({
         >
           <BookOpen className="w-3.5 h-3.5" />
           <span>الموسوعة الشاملة ({totalHerbsCount})</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab("store")}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition whitespace-nowrap ${
+            currentTab === "store"
+              ? "bg-[#C59B27] text-[#132B20] shadow-sm font-extrabold"
+              : "text-[#E2D6B5] hover:bg-[#1A382B]"
+          }`}
+        >
+          <ShoppingBag className="w-3.5 h-3.5 text-amber-300" />
+          <span>متجر الأعشاب والواتساب 🛍️</span>
+        </button>
+
+        <button
+          onClick={() => onSelectTab("store-admin")}
+          className={`flex items-center gap-1.5 px-3.5 py-2 rounded-xl transition whitespace-nowrap ${
+            currentTab === "store-admin"
+              ? "bg-[#C59B27] text-[#132B20] shadow-sm font-extrabold"
+              : "text-[#E2D6B5] hover:bg-[#1A382B]"
+          }`}
+        >
+          <Coins className="w-3.5 h-3.5 text-amber-300" />
+          <span>إدارة المتجر والأسعار ⚙️</span>
         </button>
 
         <button

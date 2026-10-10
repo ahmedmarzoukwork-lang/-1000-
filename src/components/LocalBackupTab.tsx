@@ -21,6 +21,7 @@ import {
   Server,
   Layers,
   HelpCircle,
+  Sparkles,
 } from "lucide-react";
 import { exportDatabaseAsJsonFile } from "../utils/storage";
 import {
@@ -42,6 +43,7 @@ interface LocalBackupTabProps {
   onLogout: () => void;
   onSyncToCloud: () => Promise<void>;
   isSyncing: boolean;
+  onNavigateToStoreAdmin?: () => void;
 }
 
 export const LocalBackupTab: React.FC<LocalBackupTabProps> = ({
@@ -54,10 +56,12 @@ export const LocalBackupTab: React.FC<LocalBackupTabProps> = ({
   onLogout,
   onSyncToCloud,
   isSyncing,
+  onNavigateToStoreAdmin,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
+  const [importedCountNotice, setImportedCountNotice] = useState<number | null>(null);
 
   // Google Sheets state
   const [isSheetsOperating, setIsSheetsOperating] = useState<boolean>(false);
@@ -117,6 +121,7 @@ export const LocalBackupTab: React.FC<LocalBackupTabProps> = ({
           throw new Error("تنسيق الملف غير صالح؛ يجب أن يكون مصفوفة من الأعشاب.");
         }
         onRestoreHerbs(parsed);
+        setImportedCountNotice(parsed.length);
         setStatusMessage(`تم استيراد ${parsed.length} عشبة بنجاح إلى قاعدة بيانات جهازك!`);
         setErrorMessage(null);
       } catch (err: any) {
@@ -196,6 +201,7 @@ export const LocalBackupTab: React.FC<LocalBackupTabProps> = ({
         imported.forEach((h) => map.set(String(h.id), h));
         const merged = Array.from(map.values());
         onRestoreHerbs(merged);
+        setImportedCountNotice(imported.length);
         setStatusMessage(`تم استيراد ${imported.length} عشبة بنجاح من Google Sheets ودمجها في الموسوعة.`);
       }
     } catch (err: any) {
@@ -284,6 +290,31 @@ export const LocalBackupTab: React.FC<LocalBackupTabProps> = ({
       </div>
 
       {/* Alerts */}
+      {importedCountNotice && onNavigateToStoreAdmin && (
+        <div className="p-5 bg-gradient-to-r from-[#FFF9EA] to-[#FFF3D1] border-2 border-[#E7C671] rounded-2xl text-[#61450C] shadow-md flex flex-col sm:flex-row sm:items-center justify-between gap-4 animate-in fade-in slide-in-from-top-3">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-2xl bg-[#C59B27] text-[#132B20] flex items-center justify-center font-black shrink-0">
+              <Sparkles className="w-5 h-5 text-[#132B20]" />
+            </div>
+            <div>
+              <h4 className="font-black text-sm text-[#473206]">
+                تم استيراد {importedCountNotice} صنف بنجاح!
+              </h4>
+              <p className="text-xs text-[#785E21] mt-0.5">
+                يمكن للذكاء الاصطناعي الآن مراجعة كل صنف مستورد، وإنشاء بطاقة تعريفية سريرية خاصة به، وتحديد سعر عادل لكل منتج.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={onNavigateToStoreAdmin}
+            className="bg-[#132B20] hover:bg-[#1A382B] text-[#FAF4E6] border border-[#C59B27] px-4 py-2.5 rounded-xl font-black text-xs transition shadow-md shrink-0 flex items-center justify-center gap-2 active:scale-95"
+          >
+            <Sparkles className="w-4 h-4 text-[#C59B27]" />
+            <span>الانتقال لمراجعة وتوليد البطاقات والأسعار 🤖</span>
+          </button>
+        </div>
+      )}
+
       {statusMessage && (
         <div className="p-4 bg-emerald-50 border border-emerald-200 rounded-2xl text-emerald-900 text-xs flex items-center gap-2">
           <CheckCircle2 className="w-4 h-4 text-emerald-700 shrink-0" />

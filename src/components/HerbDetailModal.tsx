@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { HerbItem } from "../types";
+import { HerbItem, CartItem, StoreConfig } from "../types";
 import {
   X,
   Printer,
@@ -17,16 +17,28 @@ import {
   Layers,
   HeartPulse,
   Bell,
+  ShoppingCart,
+  MessageCircle,
+  Truck,
+  Plus,
 } from "lucide-react";
 import { BrandLogo } from "./BrandLogo";
 import { exportElementAsPng } from "../utils/exportUtils";
 import { enrichHerbWithDetailedExplanation } from "../utils/herbEnricher";
+import {
+  getHerbPricing,
+  createWhatsAppUrl,
+  buildWhatsAppDirectHerbMessage,
+  DEFAULT_STORE_CONFIG,
+} from "../utils/storeUtils";
 
 interface HerbDetailModalProps {
   herb: HerbItem | null;
   onClose: () => void;
   customLogoUrl: string | null;
   onSetReminder?: (herb: HerbItem) => void;
+  onAddToCart?: (item: CartItem) => void;
+  storeConfig?: StoreConfig;
 }
 
 export const HerbDetailModal: React.FC<HerbDetailModalProps> = ({
@@ -34,14 +46,50 @@ export const HerbDetailModal: React.FC<HerbDetailModalProps> = ({
   onClose,
   customLogoUrl,
   onSetReminder,
+  onAddToCart,
+  storeConfig = DEFAULT_STORE_CONFIG,
 }) => {
   const [isExportingPng, setIsExportingPng] = useState(false);
   const [exportedSuccess, setExportedSuccess] = useState(false);
+  const [selectedPackageIndex, setSelectedPackageIndex] = useState(0);
+  const [cartToast, setCartToast] = useState(false);
 
   if (!herb) return null;
 
   // Guarantee complete rich explanation and clinical fields
   const enrichedHerb = enrichHerbWithDetailedExplanation(herb);
+  const pricing = getHerbPricing(enrichedHerb);
+  const currentPkg = pricing.packages[selectedPackageIndex] || pricing.packages[0];
+
+  const handleAddToCart = () => {
+    if (onAddToCart) {
+      onAddToCart({
+        id: `${enrichedHerb.id}_${currentPkg.weight}`,
+        herbId: enrichedHerb.id,
+        nameAr: enrichedHerb.nameAr,
+        nameEn: enrichedHerb.nameEn,
+        scientific: enrichedHerb.scientific,
+        packageSize: currentPkg.label,
+        price: currentPkg.price,
+        quantity: 1,
+        system: enrichedHerb.system,
+      });
+      setCartToast(true);
+      setTimeout(() => setCartToast(false), 2500);
+    }
+  };
+
+  const handleDirectWhatsAppOrder = () => {
+    const msg = buildWhatsAppDirectHerbMessage(
+      enrichedHerb,
+      currentPkg.label,
+      currentPkg.price,
+      1,
+      storeConfig
+    );
+    const url = createWhatsAppUrl(storeConfig.whatsappNumber, msg);
+    window.open(url, "_blank", "noopener,noreferrer");
+  };
 
   const modalContentId = `herb-modal-monograph-${enrichedHerb.id}`;
 
@@ -356,6 +404,79 @@ export const HerbDetailModal: React.FC<HerbDetailModalProps> = ({
               <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md font-semibold">✓ German Commission E</span>
               <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md font-semibold">✓ EMA/HMPC Certified</span>
               <span className="bg-[#EFE5CD] px-2 py-0.5 rounded-md font-semibold">✓ Ebers Papyrus Heritage</span>
+            </div>
+          </div>
+
+          {/* Section 11: Store Direct Order & WhatsApp Purchase (متجر العطارة والشحن الفوري) */}
+          <div className="bg-gradient-to-r from-[#132B20] via-[#1A382B] to-[#132B20] p-5 rounded-3xl border-2 border-[#C59B27] text-[#FBF7EE] shadow-md space-y-4 no-export">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+              <div className="flex items-center gap-2">
+                <div className="p-2 bg-[#C59B27] text-[#132B20] rounded-xl font-black">
+                  <ShoppingCart className="w-5 h-5" />
+                </div>
+                <div>
+                  <h4 className="font-black text-base text-[#FBF7EE]">
+                    طلب عشبة {enrichedHerb.nameAr} من المتجر
+                  </h4>
+                  <p className="text-[11px] text-[#E2D6B5]">
+                    عشب نقي مختبر معتمد سريرياً • جاهز للشحن السريع مع استشارة مجانية
+                  </p>
+                </div>
+              </div>
+
+              <div className="text-right sm:text-left bg-[#0D1E16] px-3.5 py-1.5 rounded-xl border border-[#C59B27]/40">
+                <span className="text-[10px] text-[#E2D6B5] block">السعر للعبوة:</span>
+                <div className="text-lg font-black font-mono text-[#F5DC7D]">
+                  {currentPkg.price} <span className="text-xs font-sans text-white">{storeConfig.currency}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Packages Selector */}
+            <div className="space-y-1.5">
+              <span className="text-xs font-bold text-[#E2D6B5] block">
+                اختر نوع وحجم العبوة:
+              </span>
+              <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 text-xs">
+                {pricing.packages.map((pkg, idx) => (
+                  <button
+                    key={idx}
+                    type="button"
+                    onClick={() => setSelectedPackageIndex(idx)}
+                    className={`p-2 rounded-xl border text-center transition font-bold cursor-pointer ${
+                      selectedPackageIndex === idx
+                        ? "bg-[#C59B27] text-[#132B20] border-[#F5DC7D] shadow-md font-black"
+                        : "bg-[#183629] text-[#E2D6B5] border-[#C59B27]/30 hover:bg-[#204434]"
+                    }`}
+                  >
+                    <span className="block truncate text-[11px]">{pkg.weight}</span>
+                    <span className="block text-[10px] font-mono mt-0.5">
+                      {pkg.price} {storeConfig.currency}
+                    </span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
+            {/* Order Buttons */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <button
+                type="button"
+                onClick={handleAddToCart}
+                className="flex items-center justify-center gap-2 bg-[#C59B27] hover:bg-[#D4AF37] text-[#132B20] font-black py-2.5 px-4 rounded-2xl shadow-md transition active:scale-95 text-xs cursor-pointer"
+              >
+                <Plus className="w-4 h-4" />
+                <span>{cartToast ? "تمت الإضافة للسلة ✓" : "إضافة إلى سلة المشتريات"}</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleDirectWhatsAppOrder}
+                className="flex items-center justify-center gap-2 bg-[#25D366] hover:bg-[#20BA5A] text-white font-black py-2.5 px-4 rounded-2xl shadow-md transition active:scale-95 text-xs cursor-pointer"
+              >
+                <MessageCircle className="w-4 h-4 fill-white text-transparent" />
+                <span>طلب فوري مباشر عبر واتساب 💬</span>
+              </button>
             </div>
           </div>
 

@@ -21,9 +21,40 @@ export interface HerbItem {
   description?: string; // شرح وتوصيف صيدلاني وسريري متكامل للمنتج
   pharmacology?: string; // آلية العمل والتأثير الفسيولوجي داخل الجسم
   benefits?: string[]; // أهم الخصائص والفوائد العلاجية
+  price?: number; // السعر الأساسي للعبوة القياسية
+  inStock?: boolean; // توفر المنتج في العطارة
+  packageOptions?: { label: string; price: number }[];
 }
 
-export type ViewTab = "catalog" | "add-ai" | "comparison" | "checker" | "advisor" | "backup";
+export type ViewTab = "catalog" | "store" | "store-admin" | "add-ai" | "comparison" | "checker" | "advisor" | "backup";
+
+export interface CartItem {
+  id: string; // unique item id (e.g. `${herbId}_${packageSize}`)
+  herbId: number | string;
+  nameAr: string;
+  nameEn?: string;
+  scientific?: string;
+  packageSize: string;
+  price: number;
+  quantity: number;
+  system?: string;
+}
+
+export interface StoreCustomerInfo {
+  fullName: string;
+  phone: string;
+  city: string;
+  address: string;
+  notes?: string;
+}
+
+export interface StoreConfig {
+  whatsappNumber: string;
+  storeName: string;
+  currency: string;
+  freeShippingThreshold: number;
+  shippingFee: number;
+}
 
 export interface DrugCheckResult {
   riskLevel: string;

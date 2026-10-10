@@ -259,6 +259,121 @@ app.post("/api/gemini/add-herb", async (req, res) => {
   }
 });
 
+// AI: Review herb item and generate authentic personalized identity card & fair store price
+app.post("/api/gemini/review-enrich-herb", async (req, res) => {
+  try {
+    const { herbName, existingData } = req.body;
+    if (!herbName || typeof herbName !== "string") {
+      res.status(400).json({ error: "اسم العشبة أو الصنف مطلوب للمراجعة" });
+      return;
+    }
+
+    const ai = getGenAI();
+    const systemInstruction = `أنت كبير الصيادلة السريريين وخبير العقاقير والتراث الطبي العربي والإسلامي (Pharmacognosy & Phytotherapy) لدى صيدلية ومتجر '1000 عشبة الطبية'.
+مهمتك: مراجعة العشبة الطبية أو الصنف المطلوب بدقة بالغة وتوليد بطاقة تعريفية سريرية وتجارية خاصة وفريدة تماماً لهذا الصنف، مع تحديد سعر عادل ومناسب حسب ندرة العشبة وقيمتها في السوق الحقيقي.
+
+يجب ألا تستخدم نصوصاً عامة مكررة؛ بل استخرج بدقة علمية:
+1. الاسم العلمي اللاتيني الحقيقي الدقيق، والعائلة النباتية، والاسم بالإنجليزية.
+2. التصنيف الطبي الأدق لجهاز الجسم المستهدف من بين: ("الهضم والكبد"، "المناعة"، "التنفس والقلب"، "الأعصاب والتكيف"، "الهرمونات والصحة العامة"، "المفاصل والكلى"، "مغذية ووقائية"، "الجلد والتجميل").
+3. المواد الكيميائية الفعالة الحقيقية الدقيقة الخاصة بهذه النبتة تحديداً (Active Constituents).
+4. الجرعة المعيارية الدقيقة وطريقة التحضير الصيدلاني والتناول.
+5. موانع الاستعمال الدقيقة والتداخلات الدوائية المعروفة.
+6. اقتباس تراثي أصيل وموثق من كتب ابن سينا (القانون في الطب) مع ذكر المزاج (حار/بارد/رطب/يابس)، أو الطب النبوي لابن القيم، أو الجامع لابن البيطار، أو التذكرة لداود الأنطاكي.
+7. لمحة تاريخية موثقة (بردية إيبرس، الطب الفرعوني، الطب الأندلسي، إلخ).
+8. وصف صيدلاني وسريري مخصص (description) يبرز فوائد هذا المنتج الخاص في المتجر.
+9. آلية التأثير الحيوي في الجسم (pharmacology) بالمسارات الإنزيمية والخلوية.
+10. قائمة بـ 4 فوائد علاجية وصحية ملموسة (benefits).
+11. سعر مقترح عادل بالريال السعودي (suggestedPrice) لعبوة 100 جم عشب عضوي نقي، يتناسب مع ندرة وصعوبة قطاف العشبة (مثلاً: 35-45 ر.س للأعشاب الشائعة كالبابونج والنعناع، 50-70 ر.س للمتوسطة كالمرامية والمورينجا ولبان الذكر، 80-150 ر.س للنادرة كالجينسنغ والزعفران النقي والعكبر).`;
+
+    const prompt = `قم بمراجعة وتوليد البطاقة التعريفية الخاصة والسعر المخصص للعشبة التالية:
+اسم العشبة: "${herbName}"
+بيانات إضافية متوفرة حالياً إن وجدت: "${existingData ? JSON.stringify(existingData) : "لا توجد"}"
+
+قم بإنشاء بطاقة سريرية وتسويقية متكاملة وفريدة لهذه النبتة بصيغة JSON.`;
+
+    const response = await callGeminiWithResilience(ai, {
+      contents: prompt,
+      config: {
+        systemInstruction,
+        responseMimeType: "application/json",
+        responseSchema: {
+          type: Type.OBJECT,
+          properties: {
+            nameAr: { type: Type.STRING },
+            nameEn: { type: Type.STRING },
+            scientific: { type: Type.STRING },
+            family: { type: Type.STRING },
+            system: { type: Type.STRING },
+            target: { type: Type.STRING },
+            active: { type: Type.STRING },
+            dose: { type: Type.STRING },
+            preparation: { type: Type.STRING },
+            safety: { type: Type.STRING },
+            safetyLevel: {
+              type: Type.STRING,
+              description: "آمن جداً أو حذر معتدل أو عالي الخطورة ويشترط إشراف طبي",
+            },
+            contraindications: { type: Type.STRING },
+            interactions: { type: Type.STRING },
+            historicalNote: { type: Type.STRING },
+            arabicHeritageCitation: {
+              type: Type.STRING,
+              description: "اقتباس صريح وموثق من القانون لابن سينا أو الطب النبوي لابن القيم أو الجامع لابن البيطار",
+            },
+            references: { type: Type.STRING },
+            description: { type: Type.STRING, description: "وصف صيدلاني وسريري مخصص لبطاقة المنتج في المتجر" },
+            pharmacology: { type: Type.STRING, description: "آلية العمل الحيوية في الجسم" },
+            benefits: {
+              type: Type.ARRAY,
+              items: { type: Type.STRING },
+              description: "أهم 4 فوائد علاجية لهذا الصنف",
+            },
+            suggestedPrice: {
+              type: Type.NUMBER,
+              description: "سعر البيع بالريال السعودي لعبوة 100 جم بناءً على ندرة وقيمة الصنف",
+            },
+          },
+          required: [
+            "nameAr",
+            "nameEn",
+            "scientific",
+            "system",
+            "target",
+            "active",
+            "dose",
+            "safety",
+            "description",
+            "benefits",
+            "suggestedPrice",
+          ],
+        },
+      },
+    });
+
+    const parsedMonograph = parseJsonSafely(response.text);
+
+    // Calculate packages based on suggestedPrice
+    const basePrice = Math.max(15, Math.round(parsedMonograph.suggestedPrice || 45));
+    const packageOptions = [
+      { label: "عبوة 100 جم (عشب عضوي نقي)", price: basePrice },
+      { label: "عبوة 250 جم (توفيرية ممتازة)", price: Math.round(basePrice * 2.2) },
+      { label: "عبوة 500 جم (نصف كيلو فاخر)", price: Math.round(basePrice * 4.1) },
+      { label: "خلاصة مركزة (قطارة صيدلانية 50 مل)", price: Math.round(basePrice * 1.5) },
+    ];
+
+    res.json({
+      success: true,
+      card: {
+        ...parsedMonograph,
+        price: basePrice,
+        packageOptions,
+      },
+    });
+  } catch (error: any) {
+    handleGeminiError(error, res, "حدث خطأ أثناء مراجعة وتوليد بطاقة التعريف بالذكاء الاصطناعي");
+  }
+});
+
 // AI: Check Drug-Herb Interaction
 app.post("/api/gemini/check-interaction", async (req, res) => {
   try {

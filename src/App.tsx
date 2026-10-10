@@ -1,7 +1,10 @@
 import React, { useState, useEffect, useRef } from "react";
-import { HerbItem, ViewTab, DailyReminder } from "./types";
+import { HerbItem, ViewTab, DailyReminder, CartItem, StoreConfig } from "./types";
 import { Navbar } from "./components/Navbar";
 import { CatalogTab } from "./components/CatalogTab";
+import { StoreTab } from "./components/StoreTab";
+import { StoreAdminTab } from "./components/StoreAdminTab";
+import { CartDrawer } from "./components/CartDrawer";
 import { AddHerbAiView } from "./components/AddHerbAiView";
 import { ComparisonTab } from "./components/ComparisonTab";
 import { DrugCheckerTab } from "./components/DrugCheckerTab";
@@ -41,6 +44,13 @@ import {
   playHerbalChime,
   showBrowserNotification,
 } from "./utils/reminderAudio";
+import {
+  loadCartFromStorage,
+  saveCartToStorage,
+  loadStoreConfig,
+  saveStoreConfig,
+  getHerbPricing,
+} from "./utils/storeUtils";
 import { enrichHerbWithDetailedExplanation } from "./utils/herbEnricher";
 
 export default function App() {
@@ -63,6 +73,11 @@ export default function App() {
   const [reminderModalHerbId, setReminderModalHerbId] = useState<string | number | null>(null);
   const [activeTriggeredReminder, setActiveTriggeredReminder] = useState<DailyReminder | null>(null);
   const [reminderFeedbackToast, setReminderFeedbackToast] = useState<string | null>(null);
+
+  // Shopping Cart & Store States
+  const [cart, setCart] = useState<CartItem[]>(() => loadCartFromStorage());
+  const [isCartOpen, setIsCartOpen] = useState<boolean>(false);
+  const [storeConfig, setStoreConfig] = useState<StoreConfig>(() => loadStoreConfig());
 
   // Firebase Auth State
   const [currentUser, setCurrentUser] = useState<User | null>(null);
@@ -206,6 +221,11 @@ export default function App() {
     saveFavoritesToStorage(favorites);
   }, [favorites]);
 
+  // Synchronize cart with localStorage
+  useEffect(() => {
+    saveCartToStorage(cart);
+  }, [cart]);
+
   // Google Login handler
   const handleLogin = async () => {
     try {
@@ -256,6 +276,34 @@ export default function App() {
         console.error("Failed to sync custom herb to cloud:", err)
       );
     }
+  };
+
+  // Update existing herb (prices, stock, clinical monograph, etc.)
+  const handleUpdateHerb = (updatedHerb: HerbItem) => {
+    setHerbs((prev) => {
+      const next = prev.map((h) => (h.id === updatedHerb.id ? updatedHerb : h));
+      saveHerbsToStorage(next);
+      return next;
+    });
+    if (currentUser) {
+      saveCustomHerbToCloud(currentUser.uid, updatedHerb).catch((err) =>
+        console.error("Failed to sync updated herb to cloud:", err)
+      );
+    }
+  };
+
+  // Delete herb from catalog and store
+  const handleDeleteHerb = (herbId: string | number) => {
+    setHerbs((prev) => {
+      const next = prev.filter((h) => h.id !== herbId);
+      saveHerbsToStorage(next);
+      return next;
+    });
+    setFavorites((prev) => {
+      const next = prev.filter((id) => id !== herbId);
+      saveFavoritesToStorage(next);
+      return next;
+    });
   };
 
   // Full manual cloud sync trigger
@@ -440,9 +488,82 @@ export default function App() {
     setActiveTriggeredReminder(reminder);
   };
 
+  // Shopping Cart & Store Handlers
+  const handleAddToCart = (item: CartItem) => {
+    setCart((prev) => {
+      const idx = prev.findIndex((i) => i.id === item.id);
+      let updated: CartItem[];
+      if (idx >= 0) {
+        updated = [...prev];
+        updated[idx] = {
+          ...updated[idx],
+          quantity: updated[idx].quantity + item.quantity,
+        };
+      } else {
+        updated = [item, ...prev];
+      }
+      saveCartToStorage(updated);
+      return updated;
+    });
+
+    setReminderFeedbackToast(`تمت إضافة "${item.nameAr}" إلى سلة المشتريات 🛒`);
+    setTimeout(() => setReminderFeedbackToast(null), 3500);
+  };
+
+  const handleAddToCartFromHerb = (herb: HerbItem) => {
+    const pricing = getHerbPricing(herb);
+    const defaultPkg = pricing.packages[0];
+    handleAddToCart({
+      id: `${herb.id}_${defaultPkg.weight}`,
+      herbId: herb.id,
+      nameAr: herb.nameAr,
+      nameEn: herb.nameEn,
+      scientific: herb.scientific,
+      packageSize: defaultPkg.label,
+      price: defaultPkg.price,
+      quantity: 1,
+      system: herb.system,
+    });
+  };
+
+  const handleUpdateCartQuantity = (id: string, delta: number) => {
+    setCart((prev) => {
+      const updated = prev
+        .map((item) => {
+          if (item.id === id) {
+            const nextQty = item.quantity + delta;
+            return nextQty > 0 ? { ...item, quantity: nextQty } : null;
+          }
+          return item;
+        })
+        .filter((item): item is CartItem => item !== null);
+      saveCartToStorage(updated);
+      return updated;
+    });
+  };
+
+  const handleRemoveCartItem = (id: string) => {
+    setCart((prev) => {
+      const updated = prev.filter((item) => item.id !== id);
+      saveCartToStorage(updated);
+      return updated;
+    });
+  };
+
+  const handleClearCart = () => {
+    setCart([]);
+    saveCartToStorage([]);
+  };
+
+  const handleUpdateStoreConfig = (newConfig: StoreConfig) => {
+    setStoreConfig(newConfig);
+    saveStoreConfig(newConfig);
+  };
+
   // Active reminders count & list of herb IDs with reminders
   const activeRemindersCount = reminders.filter((r) => r.isActive).length;
   const remindersHerbIds = reminders.map((r) => r.herbId);
+  const totalCartCount = cart.reduce((acc, item) => acc + item.quantity, 0);
 
   return (
     <div
@@ -472,6 +593,8 @@ export default function App() {
         isSyncing={isSyncing}
         onOpenReminders={() => handleOpenReminderModal()}
         activeRemindersCount={activeRemindersCount}
+        onOpenCart={() => setIsCartOpen(true)}
+        cartCount={totalCartCount}
       />
 
       {/* Main Content Area */}
@@ -490,6 +613,34 @@ export default function App() {
             onOpenReminder={handleOpenReminderModal}
             remindersHerbIds={remindersHerbIds}
             activeRemindersCount={activeRemindersCount}
+            onAddToCart={handleAddToCart}
+            storeConfig={storeConfig}
+            onOpenCart={() => setIsCartOpen(true)}
+            cartCount={totalCartCount}
+          />
+        )}
+
+        {currentTab === "store" && (
+          <StoreTab
+            herbs={herbs}
+            cart={cart}
+            onAddToCart={handleAddToCart}
+            onOpenHerbDetails={(herb) => setSelectedHerbForModal(herb)}
+            onOpenCart={() => setIsCartOpen(true)}
+            storeConfig={storeConfig}
+          />
+        )}
+
+        {currentTab === "store-admin" && (
+          <StoreAdminTab
+            herbs={herbs}
+            storeConfig={storeConfig}
+            onUpdateStoreConfig={handleUpdateStoreConfig}
+            onUpdateHerb={handleUpdateHerb}
+            onDeleteHerb={handleDeleteHerb}
+            onAddHerb={handleAddHerb}
+            onOpenHerbDetails={(herb) => setSelectedHerbForModal(herb)}
+            onNavigateToBackup={() => setCurrentTab("backup")}
           />
         )}
 
@@ -524,6 +675,7 @@ export default function App() {
             onLogout={handleLogout}
             onSyncToCloud={handleSyncAllToCloud}
             isSyncing={isSyncing}
+            onNavigateToStoreAdmin={() => setCurrentTab("store-admin")}
           />
         )}
       </main>
@@ -535,8 +687,26 @@ export default function App() {
           onClose={() => setSelectedHerbForModal(null)}
           customLogoUrl={customLogoUrl}
           onSetReminder={(herb) => handleOpenReminderModal(herb.id)}
+          onAddToCart={handleAddToCart}
+          storeConfig={storeConfig}
         />
       )}
+
+      {/* Shopping Cart Drawer (with WhatsApp Checkout) */}
+      <CartDrawer
+        isOpen={isCartOpen}
+        onClose={() => setIsCartOpen(false)}
+        cart={cart}
+        onUpdateQuantity={handleUpdateCartQuantity}
+        onRemoveItem={handleRemoveCartItem}
+        onClearCart={handleClearCart}
+        storeConfig={storeConfig}
+        onUpdateStoreConfig={handleUpdateStoreConfig}
+        onNavigateToCatalog={() => {
+          setIsCartOpen(false);
+          setCurrentTab("catalog");
+        }}
+      />
 
       {/* Daily Reminders Management Modal */}
       <DailyReminderModal

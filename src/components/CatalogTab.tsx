@@ -1,5 +1,5 @@
 import React, { useState, useMemo } from "react";
-import { HerbItem } from "../types";
+import { HerbItem, CartItem, StoreConfig } from "../types";
 import { HerbCard } from "./HerbCard";
 import {
   Search,
@@ -12,10 +12,12 @@ import {
   X,
   BookOpen,
   Bell,
+  ShoppingBag,
 } from "lucide-react";
 import { exportElementAsPng } from "../utils/exportUtils";
 import { BrandLogo } from "./BrandLogo";
 import { ScientificSourcesFooter } from "./ScientificSourcesFooter";
+import { DEFAULT_STORE_CONFIG } from "../utils/storeUtils";
 
 interface CatalogTabProps {
   herbs: HerbItem[];
@@ -28,6 +30,10 @@ interface CatalogTabProps {
   onOpenReminder?: (herbId?: string | number) => void;
   remindersHerbIds?: (string | number)[];
   activeRemindersCount?: number;
+  onAddToCart?: (item: CartItem) => void;
+  storeConfig?: StoreConfig;
+  onOpenCart?: () => void;
+  cartCount?: number;
 }
 
 const SYSTEM_CATEGORIES = [
@@ -52,6 +58,10 @@ export const CatalogTab: React.FC<CatalogTabProps> = ({
   onOpenReminder,
   remindersHerbIds,
   activeRemindersCount,
+  onAddToCart,
+  storeConfig = DEFAULT_STORE_CONFIG,
+  onOpenCart,
+  cartCount = 0,
 }) => {
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedSystem, setSelectedSystem] = useState("جميع الأجهزة");
@@ -212,6 +222,18 @@ export const CatalogTab: React.FC<CatalogTabProps> = ({
               <span>المفضلة فقط ({favorites.length})</span>
             </button>
 
+            {/* Shopping Cart Shortcut */}
+            {onOpenCart && (
+              <button
+                onClick={onOpenCart}
+                className="flex items-center gap-1.5 px-3 py-2 rounded-xl font-bold transition border bg-[#132B20] text-[#F5DC7D] border-[#C59B27] hover:bg-[#1A382B] active:scale-95 shadow-xs cursor-pointer"
+                title="سلة المشتريات والطلب المباشر بالواتساب"
+              >
+                <ShoppingBag className="w-3.5 h-3.5 text-[#C59B27]" />
+                <span>سلة الشراء ({cartCount})</span>
+              </button>
+            )}
+
             {/* Daily Reminders for Favorites Shortcut */}
             {onOpenReminder && (
               <button
@@ -311,6 +333,8 @@ export const CatalogTab: React.FC<CatalogTabProps> = ({
                 onAddToCompare={onAddToCompare}
                 onOpenReminder={onOpenReminder}
                 hasActiveReminder={remindersHerbIds?.includes(herb.id)}
+                onAddToCart={onAddToCart}
+                storeConfig={storeConfig}
               />
             ))}
           </div>
