@@ -202,6 +202,25 @@ export const HerbCard: React.FC<HerbCardProps> = ({
           </div>
         </div>
 
+        {/* Realistic Herb Image */}
+        {enrichedHerb.imageUrl && (
+          <div
+            onClick={() => onOpenDetails(enrichedHerb)}
+            className="relative w-full h-36 rounded-xl overflow-hidden mb-2.5 border border-[#E6D8BA] bg-[#EFE7D5] group-hover:border-[#C59B27] transition shadow-xs cursor-pointer"
+          >
+            <img
+              src={enrichedHerb.imageUrl}
+              alt={enrichedHerb.nameAr}
+              referrerPolicy="no-referrer"
+              className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+            />
+            <div className="absolute bottom-1.5 left-1.5 bg-[#132B20]/80 text-[#F5DC7D] px-2 py-0.5 rounded text-[9px] font-bold flex items-center gap-1 backdrop-blur-xs">
+              <Sparkles className="w-2.5 h-2.5 text-[#C59B27]" />
+              <span>صورة واقعية</span>
+            </div>
+          </div>
+        )}
+
         {/* Herb Title */}
         <h3 className="font-black text-[#132B20] text-base sm:text-lg font-['Cairo'] group-hover:text-[#9A7B1C] transition-colors leading-tight">
           {enrichedHerb.nameAr}

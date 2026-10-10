@@ -292,6 +292,12 @@ export default function App() {
     }
   };
 
+  // Batch update multiple herbs at once (used for one-click markup pricing & bulk actions)
+  const handleBatchUpdateHerbs = (updatedHerbs: HerbItem[]) => {
+    setHerbs(updatedHerbs);
+    saveHerbsToStorage(updatedHerbs);
+  };
+
   // Delete herb from catalog and store
   const handleDeleteHerb = (herbId: string | number) => {
     setHerbs((prev) => {
@@ -637,6 +643,7 @@ export default function App() {
             storeConfig={storeConfig}
             onUpdateStoreConfig={handleUpdateStoreConfig}
             onUpdateHerb={handleUpdateHerb}
+            onBatchUpdateHerbs={handleBatchUpdateHerbs}
             onDeleteHerb={handleDeleteHerb}
             onAddHerb={handleAddHerb}
             onOpenHerbDetails={(herb) => setSelectedHerbForModal(herb)}
@@ -676,6 +683,7 @@ export default function App() {
             onSyncToCloud={handleSyncAllToCloud}
             isSyncing={isSyncing}
             onNavigateToStoreAdmin={() => setCurrentTab("store-admin")}
+            storeConfig={storeConfig}
           />
         )}
       </main>

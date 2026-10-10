@@ -15,6 +15,7 @@ import {
   FileText,
   Activity,
   Layers,
+  Image as ImageIcon,
 } from "lucide-react";
 import { ScientificSourcesFooter } from "./ScientificSourcesFooter";
 import { enrichHerbWithDetailedExplanation } from "../utils/herbEnricher";
@@ -106,6 +107,37 @@ export const AddHerbAiView: React.FC<AddHerbAiViewProps> = ({
   const [generatedHerb, setGeneratedHerb] = useState<HerbItem | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
   const [seedOffset, setSeedOffset] = useState(0);
+  const [isGeneratingImage, setIsGeneratingImage] = useState(false);
+
+  // Generate realistic Imagen image for current herb
+  const handleGenerateImageForHerb = async () => {
+    if (!generatedHerb) return;
+    setIsGeneratingImage(true);
+    try {
+      const res = await fetch("/api/gemini/generate-herb-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          herbName: generatedHerb.nameAr,
+          scientific: generatedHerb.scientific,
+          system: generatedHerb.system,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.imageUrl) {
+        setGeneratedHerb({
+          ...generatedHerb,
+          imageUrl: data.imageUrl,
+        });
+      } else {
+        throw new Error(data.error || "تعذر توليد الصورة");
+      }
+    } catch (err: any) {
+      alert(`خطأ توليد الصورة: ${err.message || err}`);
+    } finally {
+      setIsGeneratingImage(false);
+    }
+  };
 
   // Filter pool of candidate herbs excluding existing herbs
   const availableCandidates = useMemo(() => {
@@ -161,7 +193,7 @@ export const AddHerbAiView: React.FC<AddHerbAiViewProps> = ({
       const response = await fetch("/api/gemini/add-herb", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ plantQuery: query }),
+        body: JSON.stringify({ plantQuery: query, includeImage: true }),
       });
 
       const data = await response.json();
@@ -188,6 +220,7 @@ export const AddHerbAiView: React.FC<AddHerbAiViewProps> = ({
         description: data.herb.description || "",
         pharmacology: data.herb.pharmacology || "",
         benefits: Array.isArray(data.herb.benefits) ? data.herb.benefits : [],
+        imageUrl: data.herb.imageUrl || undefined,
         references:
           data.herb.references ||
           "دراسات منظمة الصحة العالمية (WHO Monographs)، دستور اللجنة الألمانية (German Commission E)، الهيئة الأوروبية للأدوية (EMA/HMPC)، وبردية إيبرس الطبية.",
@@ -408,6 +441,65 @@ export const AddHerbAiView: React.FC<AddHerbAiViewProps> = ({
               <Save className="w-4 h-4" />
               <span>حفظ في صيدلية جهازي المحلية</span>
             </button>
+          </div>
+
+          {/* Realistic Imagen Image */}
+          <div className="bg-[#FAF7EE] p-4 rounded-2xl border-2 border-[#D9C496] flex flex-col sm:flex-row items-center gap-4">
+            <div className="w-32 h-32 rounded-2xl overflow-hidden border-2 border-[#D9C496] bg-white flex items-center justify-center shrink-0 shadow-sm">
+              {generatedHerb.imageUrl ? (
+                <img
+                  src={generatedHerb.imageUrl}
+                  alt={generatedHerb.nameAr}
+                  referrerPolicy="no-referrer"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <div className="text-center p-2 text-[#8C7A53]">
+                  <ImageIcon className="w-8 h-8 mx-auto mb-1 text-[#C59B27]" />
+                  <span className="text-[10px] block">لا توجد صورة</span>
+                </div>
+              )}
+            </div>
+
+            <div className="flex-1 space-y-2 text-right w-full">
+              <div className="flex items-center justify-between">
+                <span className="text-xs font-black text-[#132B20]">
+                  {generatedHerb.imageUrl
+                    ? "صورة واقعية مولدة بتقنية Imagen ✨"
+                    : "إضافة صورة واقعية للعشبة (Imagen)"}
+                </span>
+                {generatedHerb.imageUrl && (
+                  <span className="text-[10px] font-bold bg-[#132B20] text-[#F5DC7D] px-2 py-0.5 rounded-md">
+                    Imagen Photorealistic
+                  </span>
+                )}
+              </div>
+              <p className="text-[11px] text-[#55472A]">
+                توليد صورة فوتوغرافية واقعية تبرز النبتة وأوراقها وأزهارها الطبيعية بدقة عالية لتظهر مباشرة في بطاقة المنتج.
+              </p>
+              <button
+                type="button"
+                onClick={handleGenerateImageForHerb}
+                disabled={isGeneratingImage}
+                className="bg-[#132B20] hover:bg-[#1C3E2F] text-[#F5DC7D] px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-2 shadow-sm disabled:opacity-50"
+              >
+                {isGeneratingImage ? (
+                  <>
+                    <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C59B27]" />
+                    <span>جاري توليد الصورة بالذكاء الاصطناعي...</span>
+                  </>
+                ) : (
+                  <>
+                    <Sparkles className="w-3.5 h-3.5 text-[#C59B27]" />
+                    <span>
+                      {generatedHerb.imageUrl
+                        ? "إعادة توليد صورة واقعية جديدة (Imagen)"
+                        : "توليد صورة واقعية للعشبة الآن (Imagen)"}
+                    </span>
+                  </>
+                )}
+              </button>
+            </div>
           </div>
 
           {/* Comprehensive Product Description */}

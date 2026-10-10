@@ -219,6 +219,22 @@ export const HerbDetailModal: React.FC<HerbDetailModalProps> = ({
             </div>
           </div>
 
+          {/* Herb Realistic Image Showcase if available */}
+          {enrichedHerb.imageUrl && (
+            <div className="relative w-full h-56 sm:h-72 rounded-2xl overflow-hidden border-2 border-[#D9C496] shadow-md bg-[#EFE7D5]">
+              <img
+                src={enrichedHerb.imageUrl}
+                alt={enrichedHerb.nameAr}
+                referrerPolicy="no-referrer"
+                className="w-full h-full object-cover"
+              />
+              <div className="absolute bottom-3 right-3 bg-[#132B20]/85 text-[#F5DC7D] px-3 py-1 rounded-xl text-xs font-bold flex items-center gap-1.5 backdrop-blur-xs border border-[#C59B27]/40 shadow-sm">
+                <Sparkles className="w-3.5 h-3.5 text-[#C59B27]" />
+                <span>صورة واقعية للنبتة مولدة بالذكاء الاصطناعي (Imagen)</span>
+              </div>
+            </div>
+          )}
+
           {/* Section 1: Detailed Product Clinical Description (شرح وتوصيف شامل وموسع للمنتج) */}
           <div className="bg-[#FAF4E6] p-5 rounded-2xl border-2 border-[#D9C496] shadow-xs">
             <div className="flex items-center justify-between gap-2 mb-2">

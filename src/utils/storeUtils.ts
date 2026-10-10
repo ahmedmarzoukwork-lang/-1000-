@@ -6,7 +6,41 @@ export const DEFAULT_STORE_CONFIG: StoreConfig = {
   currency: "ر.س",
   freeShippingThreshold: 150,
   shippingFee: 25,
+  markupPercentage: 25, // هامش الربح التلقائي الافتراضي 25%
 };
+
+// Calculate price with markup
+export function applyMarkupToPrice(price: number, markupPercentage: number): number {
+  if (!price || price <= 0) return price;
+  const markup = markupPercentage || 0;
+  return Math.max(1, Math.round(price * (1 + markup / 100)));
+}
+
+// Generate full standard package options based on a base price
+export function generatePackagesForBasePrice(basePrice: number): { label: string; price: number; weight: string }[] {
+  return [
+    {
+      label: "عبوة 100 جم (عشب عضوي نقي)",
+      weight: "100 جم",
+      price: basePrice,
+    },
+    {
+      label: "عبوة 250 جم (توفيرية ممتازة)",
+      weight: "250 جم",
+      price: Math.round(basePrice * 2.2),
+    },
+    {
+      label: "عبوة 500 جم (نصف كيلو فاخر)",
+      weight: "500 جم",
+      price: Math.round(basePrice * 4.1),
+    },
+    {
+      label: "خلاصة مركزة (قطارة صيدلانية 50 مل)",
+      weight: "قطارة 50 مل",
+      price: Math.round(basePrice * 1.6),
+    },
+  ];
+}
 
 const STORE_CONFIG_STORAGE_KEY = "herbal_1000_store_config";
 const CART_STORAGE_KEY = "herbal_1000_cart_items";

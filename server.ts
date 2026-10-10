@@ -132,6 +132,48 @@ function handleGeminiError(error: any, res: express.Response, defaultArabicMessa
   });
 }
 
+// AI: Generate realistic photorealistic botanical image for a herb using Imagen models
+async function generateHerbBotanicalImage(
+  ai: GoogleGenAI,
+  herbName: string,
+  scientific?: string
+): Promise<string | null> {
+  const prompt = `A studio-lit professional macro photograph of the medicinal herb "${herbName}" ${
+    scientific ? `(${scientific})` : ""
+  }. Natural botanical specimen showcasing fresh vibrant leaves, herbal texture, delicate flowers or seeds, placed elegantly on a clean natural wooden surface with soft warm apothecary lighting. High resolution, sharp focus, botanical product photography, ultra-realistic, authentic colors, clean composition.`;
+
+  const imageModels = ["gemini-3.1-flash-lite-image", "gemini-3-pro-image"];
+
+  for (const model of imageModels) {
+    try {
+      console.log(`[Gemini Image API] Requesting ${model} for "${herbName}"...`);
+      const response = await ai.models.generateContent({
+        model,
+        contents: {
+          parts: [{ text: prompt }],
+        },
+        config: {
+          imageConfig: {
+            aspectRatio: "1:1",
+          },
+        },
+      });
+
+      const parts = response.candidates?.[0]?.content?.parts || [];
+      for (const part of parts) {
+        if (part.inlineData && part.inlineData.data) {
+          const mimeType = part.inlineData.mimeType || "image/png";
+          return `data:${mimeType};base64,${part.inlineData.data}`;
+        }
+      }
+    } catch (err: any) {
+      console.warn(`[Gemini Image API] Model ${model} failed for "${herbName}":`, err?.message || err);
+    }
+  }
+
+  return null;
+}
+
 // API Routes
 app.get("/api/health", (_req, res) => {
   res.json({ status: "ok", timestamp: new Date().toISOString() });
@@ -253,7 +295,24 @@ app.post("/api/gemini/add-herb", async (req, res) => {
     });
 
     const parsedData = parseJsonSafely(response.text);
-    res.json({ success: true, herb: parsedData });
+
+    let imageUrl: string | undefined = undefined;
+    if (req.body.includeImage) {
+      try {
+        const generatedImg = await generateHerbBotanicalImage(
+          ai,
+          parsedData.nameAr || plantQuery,
+          parsedData.scientific
+        );
+        if (generatedImg) {
+          imageUrl = generatedImg;
+        }
+      } catch (imgErr) {
+        console.warn("Optional image generation failed during add:", imgErr);
+      }
+    }
+
+    res.json({ success: true, herb: { ...parsedData, imageUrl } });
   } catch (error: any) {
     handleGeminiError(error, res, "حدث خطأ أثناء استخراج بيانات النبتة بالذكاء الاصطناعي");
   }
@@ -361,16 +420,64 @@ app.post("/api/gemini/review-enrich-herb", async (req, res) => {
       { label: "خلاصة مركزة (قطارة صيدلانية 50 مل)", price: Math.round(basePrice * 1.5) },
     ];
 
+    let imageUrl: string | undefined = undefined;
+    if (req.body.includeImage) {
+      try {
+        const generatedImg = await generateHerbBotanicalImage(
+          ai,
+          herbName,
+          parsedMonograph.scientific
+        );
+        if (generatedImg) {
+          imageUrl = generatedImg;
+        }
+      } catch (imgErr) {
+        console.warn("Optional image generation failed during review:", imgErr);
+      }
+    }
+
     res.json({
       success: true,
       card: {
         ...parsedMonograph,
         price: basePrice,
         packageOptions,
+        imageUrl,
       },
     });
   } catch (error: any) {
     handleGeminiError(error, res, "حدث خطأ أثناء مراجعة وتوليد بطاقة التعريف بالذكاء الاصطناعي");
+  }
+});
+
+// AI: Generate realistic photorealistic botanical image for a herb using Imagen models
+app.post("/api/gemini/generate-herb-image", async (req, res) => {
+  try {
+    const { herbName, scientific } = req.body;
+    if (!herbName || typeof herbName !== "string") {
+      res.status(400).json({ success: false, error: "اسم العشبة مطلوب لتوليد الصورة" });
+      return;
+    }
+
+    const ai = getGenAI();
+    console.log(`[Image Generation] Generating photorealistic image for: "${herbName}"...`);
+    const imageUrl = await generateHerbBotanicalImage(ai, herbName, scientific);
+
+    if (!imageUrl) {
+      res.status(503).json({
+        success: false,
+        error: "خوادم توليد الصور تشهد إقبالاً في هذه اللحظة، يرجى النقر على إعادة المحاولة بعد ثوانٍ قليلة.",
+        canRetry: true,
+      });
+      return;
+    }
+
+    res.json({
+      success: true,
+      imageUrl,
+    });
+  } catch (error: any) {
+    handleGeminiError(error, res, "فشل توليد صورة واقعية للعشبة بالذكاء الاصطناعي");
   }
 });
 

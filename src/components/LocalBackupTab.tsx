@@ -1,5 +1,5 @@
 import React, { useRef, useState, useEffect } from "react";
-import { HerbItem } from "../types";
+import { HerbItem, StoreConfig } from "../types";
 import { User } from "firebase/auth";
 import {
   HardDrive,
@@ -44,6 +44,7 @@ interface LocalBackupTabProps {
   onSyncToCloud: () => Promise<void>;
   isSyncing: boolean;
   onNavigateToStoreAdmin?: () => void;
+  storeConfig?: StoreConfig;
 }
 
 export const LocalBackupTab: React.FC<LocalBackupTabProps> = ({
@@ -57,6 +58,7 @@ export const LocalBackupTab: React.FC<LocalBackupTabProps> = ({
   onSyncToCloud,
   isSyncing,
   onNavigateToStoreAdmin,
+  storeConfig,
 }) => {
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [statusMessage, setStatusMessage] = useState<string | null>(null);
@@ -191,7 +193,8 @@ export const LocalBackupTab: React.FC<LocalBackupTabProps> = ({
     try {
       const token = await ensureAccessToken();
       const sheetId = extractSpreadsheetId(targetSpreadsheetInput);
-      const imported = await importHerbsFromSheets(token, sheetId);
+      const markup = storeConfig?.markupPercentage;
+      const imported = await importHerbsFromSheets(token, sheetId, markup);
       if (imported.length === 0) {
         setErrorMessage("لم يتم العثور على أي صفوف أو بيانات أعشاب في الجدول المحدد.");
       } else {
@@ -202,7 +205,8 @@ export const LocalBackupTab: React.FC<LocalBackupTabProps> = ({
         const merged = Array.from(map.values());
         onRestoreHerbs(merged);
         setImportedCountNotice(imported.length);
-        setStatusMessage(`تم استيراد ${imported.length} عشبة بنجاح من Google Sheets ودمجها في الموسوعة.`);
+        const markupText = markup ? ` مع تطبيق هامش ربح تلقائي (+${markup}%) على الأسعار المستوردة` : "";
+        setStatusMessage(`تم استيراد ${imported.length} عشبة بنجاح من Google Sheets ودمجها في الموسوعة${markupText}.`);
       }
     } catch (err: any) {
       setErrorMessage(`خطأ في استيراد بيانات Google Sheets: ${err.message || err}`);

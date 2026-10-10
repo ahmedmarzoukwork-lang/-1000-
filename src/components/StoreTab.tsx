@@ -242,25 +242,63 @@ export const StoreTab: React.FC<StoreTabProps> = ({
               className="bg-[#FCF9F2] rounded-3xl border-2 border-[#E6D8BA] hover:border-[#C59B27] p-4 shadow-xs hover:shadow-md transition flex flex-col justify-between group"
             >
               <div>
-                {/* Header Tag */}
-                <div className="flex items-center justify-between text-[11px] mb-2">
-                  <div className="flex items-center gap-1.5">
-                    <span className="font-bold px-2 py-0.5 rounded-lg bg-[#132B20] text-[#F5DC7D]">
+                {/* Product Realistic Image */}
+                <div
+                  onClick={() => onOpenHerbDetails(herb)}
+                  className="relative w-full h-44 rounded-2xl overflow-hidden mb-3 border border-[#E6D8BA] bg-[#EFE7D5] group-hover:border-[#C59B27] transition shadow-xs cursor-pointer"
+                >
+                  {herb.imageUrl ? (
+                    <img
+                      src={herb.imageUrl}
+                      alt={herb.nameAr}
+                      referrerPolicy="no-referrer"
+                      className="w-full h-full object-cover group-hover:scale-105 transition duration-500"
+                    />
+                  ) : (
+                    <div className="w-full h-full flex flex-col items-center justify-center bg-gradient-to-br from-[#FAF5E8] to-[#EFE7D5] text-[#8C7A53] p-4 text-center">
+                      <Sparkles className="w-7 h-7 text-[#C59B27] mb-1 opacity-70" />
+                      <span className="text-xs font-bold font-['Cairo'] text-[#55472A]">
+                        {herb.nameAr}
+                      </span>
+                      <span className="text-[10px] text-[#8C7A53] italic truncate max-w-[90%]">
+                        {herb.scientific || herb.nameEn}
+                      </span>
+                    </div>
+                  )}
+
+                  {/* Header Badges Overlay */}
+                  <div className="absolute top-2 right-2">
+                    <span className="font-bold px-2 py-0.5 rounded-lg bg-[#132B20]/90 backdrop-blur-xs text-[#F5DC7D] text-[10px] shadow-sm">
                       {herb.system}
                     </span>
-                    {herb.inStock === false && (
-                      <span className="font-bold px-1.5 py-0.5 rounded-md bg-rose-100 text-rose-800 border border-rose-300 text-[10px]">
+                  </div>
+                  <div className="absolute top-2 left-2">
+                    <span className="font-mono font-bold text-[#F5DC7D] bg-[#132B20]/80 px-2 py-0.5 rounded-md text-[10px]">
+                      #{String(herb.id).padStart(3, "0")}
+                    </span>
+                  </div>
+                  {herb.inStock === false && (
+                    <div className="absolute bottom-2 right-2">
+                      <span className="font-bold px-2 py-0.5 rounded-md bg-rose-600/95 text-white text-[10px] shadow-sm">
                         نفد من المخزون
                       </span>
-                    )}
-                  </div>
-                  <span className="font-mono font-bold text-[#8C7A53]">
-                    #{String(herb.id).padStart(3, "0")}
-                  </span>
+                    </div>
+                  )}
+                  {herb.imageUrl && (
+                    <div className="absolute bottom-2 left-2">
+                      <span className="bg-[#132B20]/85 text-[#F5DC7D] px-1.5 py-0.5 rounded text-[9px] font-bold flex items-center gap-1 backdrop-blur-xs">
+                        <Sparkles className="w-2.5 h-2.5 text-[#C59B27]" />
+                        <span>Imagen</span>
+                      </span>
+                    </div>
+                  )}
                 </div>
 
                 {/* Herb Name */}
-                <h4 className="font-black text-base text-[#132B20] group-hover:text-[#9A7B1C] transition-colors">
+                <h4
+                  onClick={() => onOpenHerbDetails(herb)}
+                  className="font-black text-base text-[#132B20] group-hover:text-[#9A7B1C] transition-colors cursor-pointer"
+                >
                   {herb.nameAr}
                 </h4>
                 <div className="text-[11px] text-[#7A6B48] italic font-sans flex items-center gap-1 mt-0.5 truncate">

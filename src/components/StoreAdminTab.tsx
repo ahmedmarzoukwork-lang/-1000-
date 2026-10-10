@@ -21,6 +21,12 @@ import {
   Pause,
   SlidersHorizontal,
   FileSpreadsheet,
+  Percent,
+  TrendingUp,
+  Calculator,
+  Zap,
+  Check,
+  Image as ImageIcon,
 } from "lucide-react";
 
 interface StoreAdminTabProps {
@@ -28,6 +34,7 @@ interface StoreAdminTabProps {
   storeConfig: StoreConfig;
   onUpdateStoreConfig: (newConfig: StoreConfig) => void;
   onUpdateHerb: (updatedHerb: HerbItem) => void;
+  onBatchUpdateHerbs?: (updatedHerbs: HerbItem[]) => void;
   onDeleteHerb: (herbId: string | number) => void;
   onAddHerb: (newHerb: HerbItem) => void;
   onOpenHerbDetails: (herb: HerbItem) => void;
@@ -39,6 +46,7 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
   storeConfig,
   onUpdateStoreConfig,
   onUpdateHerb,
+  onBatchUpdateHerbs,
   onDeleteHerb,
   onAddHerb,
   onOpenHerbDetails,
@@ -77,11 +85,113 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
   const [newHerbPrice, setNewHerbPrice] = useState<number>(45);
   const [newHerbInStock, setNewHerbInStock] = useState(true);
   const [newHerbDescription, setNewHerbDescription] = useState("");
+  const [newHerbImageUrl, setNewHerbImageUrl] = useState<string>("");
   const [isGeneratingNewHerbAi, setIsGeneratingNewHerbAi] = useState(false);
+  const [isGeneratingNewHerbImage, setIsGeneratingNewHerbImage] = useState(false);
   const [newHerbError, setNewHerbError] = useState<string | null>(null);
+
+  // Edit Herb Image Generating State
+  const [isGeneratingEditImage, setIsGeneratingEditImage] = useState(false);
+  const [generatingImageHerbId, setGeneratingImageHerbId] = useState<string | number | null>(null);
 
   // Config Form State
   const [tempConfig, setTempConfig] = useState<StoreConfig>({ ...storeConfig });
+
+  // Markup Percentage & Bulk Price Updating State
+  const [markupPercentage, setMarkupPercentage] = useState<number>(() => storeConfig.markupPercentage ?? 25);
+  const [showBulkMarkupModal, setShowBulkMarkupModal] = useState<boolean>(false);
+  const [roundToNearestRiyal, setRoundToNearestRiyal] = useState<boolean>(true);
+  const [updatePackagesProportionally, setUpdatePackagesProportionally] = useState<boolean>(true);
+  const [markupScope, setMarkupScope] = useState<"all" | "importedOnly">("all");
+  const [isApplyingBulkMarkup, setIsApplyingBulkMarkup] = useState<boolean>(false);
+  const [markupSavedNotice, setMarkupSavedNotice] = useState<string | null>(null);
+
+  // Save default markup percentage to store config
+  const handleSaveMarkupPercentage = (newPercentage: number) => {
+    setMarkupPercentage(newPercentage);
+    const updatedConfig = { ...storeConfig, markupPercentage: newPercentage };
+    onUpdateStoreConfig(updatedConfig);
+    setMarkupSavedNotice(`تم حفظ هامش الربح (${newPercentage}%) كإعداد افتراضي للمتجر!`);
+    setTimeout(() => setMarkupSavedNotice(null), 3500);
+  };
+
+  // Preview sample herbs for bulk markup modal
+  const previewSampleHerbs = useMemo(() => {
+    if (herbs.length === 0) return [];
+    const samples = [
+      herbs[0],
+      herbs[Math.floor(herbs.length / 3)],
+      herbs[Math.floor((herbs.length * 2) / 3)],
+      herbs[herbs.length - 1],
+    ].filter(Boolean);
+    return Array.from(new Set(samples));
+  }, [herbs]);
+
+  // Execute One-Click Bulk Markup on all herbs
+  const handleExecuteBulkMarkup = () => {
+    setIsApplyingBulkMarkup(true);
+    try {
+      const targetHerbs =
+        markupScope === "importedOnly"
+          ? herbs.filter(
+              (h) =>
+                h.isCustom ||
+                String(h.id).startsWith("sheet_") ||
+                String(h.id).startsWith("sheet-")
+            )
+          : herbs;
+
+      const targetIds = new Set(targetHerbs.map((h) => String(h.id)));
+
+      const updatedHerbs = herbs.map((herb) => {
+        if (!targetIds.has(String(herb.id))) return herb;
+
+        const base = herb.price && herb.price > 0 ? herb.price : 45;
+        const rawNewPrice = base * (1 + markupPercentage / 100);
+        const finalBasePrice = roundToNearestRiyal
+          ? Math.max(1, Math.round(rawNewPrice))
+          : Math.max(1, Number(rawNewPrice.toFixed(2)));
+
+        const updatedPackages = updatePackagesProportionally
+          ? [
+              { label: "عبوة 100 جم (عشب عضوي نقي)", price: finalBasePrice },
+              {
+                label: "عبوة 250 جم (توفيرية ممتازة)",
+                price: Math.round(finalBasePrice * 2.2),
+              },
+              {
+                label: "عبوة 500 جم (نصف كيلو فاخر)",
+                price: Math.round(finalBasePrice * 4.1),
+              },
+              {
+                label: "خلاصة مركزة (قطارة صيدلانية 50 مل)",
+                price: Math.round(finalBasePrice * 1.6),
+              },
+            ]
+          : herb.packageOptions;
+
+        return {
+          ...herb,
+          price: finalBasePrice,
+          packageOptions: updatedPackages,
+        };
+      });
+
+      if (onBatchUpdateHerbs) {
+        onBatchUpdateHerbs(updatedHerbs);
+      } else {
+        updatedHerbs.forEach((h) => onUpdateHerb(h));
+      }
+
+      setShowBulkMarkupModal(false);
+      setSavedPriceNotice(
+        `🎉 تم بنجاح تحديث أسعار ${targetHerbs.length} عشبة وفق هامش ربح +${markupPercentage}%!`
+      );
+      setTimeout(() => setSavedPriceNotice(null), 4000);
+    } finally {
+      setIsApplyingBulkMarkup(false);
+    }
+  };
 
   // System Categories
   const systemOptions = [
@@ -236,6 +346,102 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
     }
   };
 
+  // Generate realistic botanical Imagen image for a single herb
+  const handleGenerateSingleHerbImage = async (herb: HerbItem) => {
+    try {
+      setGeneratingImageHerbId(herb.id);
+      const res = await fetch("/api/gemini/generate-herb-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          herbName: herb.nameAr,
+          scientific: herb.scientific,
+          system: herb.system,
+        }),
+      });
+
+      const data = await res.json();
+      if (!res.ok || !data.success || !data.imageUrl) {
+        throw new Error(data.error || "فشل توليد صورة واقعية للعشبة");
+      }
+
+      const updated = {
+        ...herb,
+        imageUrl: data.imageUrl,
+      };
+      onUpdateHerb(updated);
+      setSavedPriceNotice(`🎨 تم توليد صورة واقعية بتقنية Imagen للعشبة "${herb.nameAr}" بنجاح!`);
+      setTimeout(() => setSavedPriceNotice(null), 3500);
+    } catch (err: any) {
+      alert(`حدث خطأ أثناء توليد الصورة: ${err.message || err}`);
+    } finally {
+      setGeneratingImageHerbId(null);
+    }
+  };
+
+  // Generate realistic image for Add Herb modal
+  const handleGenerateNewHerbImage = async () => {
+    if (!newHerbName.trim()) {
+      setNewHerbError("يرجى إدخال اسم العشبة بالعربية أولاً لتوليد صورتها");
+      return;
+    }
+    setIsGeneratingNewHerbImage(true);
+    setNewHerbError(null);
+    try {
+      const res = await fetch("/api/gemini/generate-herb-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          herbName: newHerbName,
+          scientific: newHerbScientific,
+          system: newHerbSystem,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.imageUrl) {
+        setNewHerbImageUrl(data.imageUrl);
+      } else {
+        throw new Error(data.error || "تعذر توليد الصورة");
+      }
+    } catch (err: any) {
+      alert(`خطأ توليد الصورة: ${err.message || err}`);
+    } finally {
+      setIsGeneratingNewHerbImage(false);
+    }
+  };
+
+  // Generate realistic image for Edit Herb modal
+  const handleGenerateEditHerbImage = async () => {
+    if (!herbToEdit) return;
+    setIsGeneratingEditImage(true);
+    try {
+      const res = await fetch("/api/gemini/generate-herb-image", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          herbName: herbToEdit.nameAr,
+          scientific: herbToEdit.scientific,
+          system: herbToEdit.system,
+        }),
+      });
+      const data = await res.json();
+      if (res.ok && data.success && data.imageUrl) {
+        setHerbToEdit({
+          ...herbToEdit,
+          imageUrl: data.imageUrl,
+        });
+        setSavedPriceNotice("🎨 تم توليد صورة واقعية جديدة للعشبة بنجاح!");
+        setTimeout(() => setSavedPriceNotice(null), 3000);
+      } else {
+        throw new Error(data.error || "تعذر توليد الصورة");
+      }
+    } catch (err: any) {
+      alert(`خطأ توليد الصورة: ${err.message || err}`);
+    } finally {
+      setIsGeneratingEditImage(false);
+    }
+  };
+
   // Launch Bulk AI Review Runner
   const handleStartBulkReview = (onlyNeedsAi: boolean) => {
     const queue = onlyNeedsAi ? herbs.filter((h) => !hasCustomAiCard(h)) : [...herbs];
@@ -374,6 +580,7 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
       addedAt: new Date().toISOString(),
       price: price,
       inStock: newHerbInStock,
+      imageUrl: newHerbImageUrl.trim() || undefined,
       description: newHerbDescription.trim() || `عشبة ${newHerbName.trim()} عضوية نقية وموثقة لعلاج ودعم ${newHerbSystem}.`,
       benefits: [
         `دعم وتنشيط وظائف ${newHerbSystem}`,
@@ -395,6 +602,7 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
     setNewHerbScientific("");
     setNewHerbPrice(45);
     setNewHerbDescription("");
+    setNewHerbImageUrl("");
     setNewHerbError(null);
   };
 
@@ -530,6 +738,99 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
         </div>
       )}
 
+      {/* SECTION: Automated Markup Percentage & One-Click Bulk Pricing */}
+      <div className="bg-gradient-to-br from-[#FFFFFF] via-[#FFFDF8] to-[#FFF9EA] p-5 sm:p-6 rounded-3xl border-2 border-[#D9C496] shadow-md relative overflow-hidden">
+        {/* Subtle background ornamentation */}
+        <div className="absolute top-0 left-0 w-32 h-32 bg-[#C59B27]/5 rounded-full blur-2xl pointer-events-none" />
+
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-5 relative z-10">
+          {/* Right/Info: Title, explanation, and badge */}
+          <div className="space-y-2">
+            <div className="flex flex-wrap items-center gap-2">
+              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#132B20] text-[#F5DC7D] font-extrabold text-xs shadow-sm">
+                <Percent className="w-3.5 h-3.5 text-[#C59B27]" />
+                <span>هامش الربح التلقائي والتسعير الذكي</span>
+              </span>
+              <span className="text-[11px] font-bold px-2.5 py-0.5 rounded-full bg-[#EFE7D5] text-[#61450C] border border-[#D9C496]">
+                يطبق تلقائياً عند استيراد بيانات Google Sheets
+              </span>
+              {markupSavedNotice && (
+                <span className="inline-flex items-center gap-1 text-[11px] font-bold text-emerald-700 bg-emerald-50 px-2.5 py-0.5 rounded-full border border-emerald-300 animate-in fade-in">
+                  <Check className="w-3 h-3 text-emerald-600" />
+                  {markupSavedNotice}
+                </span>
+              )}
+            </div>
+
+            <h2 className="text-lg sm:text-xl font-black text-[#132B20]">
+              ضبط هامش الربح وتحديث أسعار كافة المنتجات بنقرة زر
+            </h2>
+            <p className="text-xs sm:text-sm text-[#5C4D26] max-w-2xl leading-relaxed">
+              حدد نسبة هامش الربح الافتراضية (Markup %) ليتم اعتمادها آلياً عند استيراد أي أصناف جديدة من جداول Google Sheets، أو طبق هذه النسبة الآن على جميع أصناف المتجر الموجودة دفعة واحدة مع إعادة احتساب الباقات بدقة.
+            </p>
+          </div>
+
+          {/* Quick Markup Presets & One-Click Trigger Button */}
+          <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-3 shrink-0">
+            {/* Percentage selector & input */}
+            <div className="bg-[#FAF7EE] p-2 rounded-2xl border border-[#D9C496] flex items-center gap-2">
+              <span className="text-xs font-black text-[#473B1C] pr-1 flex items-center gap-1">
+                <Calculator className="w-3.5 h-3.5 text-[#C59B27]" />
+                الهامش:
+              </span>
+
+              {/* Quick Presets */}
+              <div className="flex items-center gap-1">
+                {[15, 20, 25, 30, 50].map((preset) => (
+                  <button
+                    key={preset}
+                    type="button"
+                    onClick={() => handleSaveMarkupPercentage(preset)}
+                    className={`px-2 py-1 rounded-lg text-xs font-black transition ${
+                      markupPercentage === preset
+                        ? "bg-[#C59B27] text-[#132B20] shadow-sm scale-105"
+                        : "bg-white hover:bg-[#EFE7D5] text-[#55472A] border border-[#D9C496]/50"
+                    }`}
+                  >
+                    +{preset}%
+                  </button>
+                ))}
+              </div>
+
+              {/* Custom Input */}
+              <div className="relative w-16">
+                <input
+                  type="number"
+                  min="0"
+                  max="500"
+                  value={markupPercentage}
+                  onChange={(e) => {
+                    const val = Number(e.target.value);
+                    setMarkupPercentage(val);
+                  }}
+                  onBlur={() => handleSaveMarkupPercentage(markupPercentage)}
+                  className="w-full text-center px-1 py-1 rounded-lg border border-[#D9C496] bg-white text-xs font-black text-[#132B20] focus:ring-1 focus:ring-[#C59B27]"
+                  title="أدخل نسبة مخصصة واضغط خارج الحقل للحفظ"
+                />
+                <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#888] pointer-events-none">
+                  %
+                </span>
+              </div>
+            </div>
+
+            {/* The Prominent One-Click Bulk Update Button */}
+            <button
+              type="button"
+              onClick={() => setShowBulkMarkupModal(true)}
+              className="bg-gradient-to-r from-[#132B20] via-[#1A382B] to-[#132B20] hover:from-[#1A382B] hover:to-[#244A3A] text-[#F5DC7D] hover:text-white border-2 border-[#C59B27] px-4 py-2.5 rounded-2xl font-black text-xs sm:text-sm shadow-md hover:shadow-xl transition-all duration-200 flex items-center justify-center gap-2 group active:scale-95"
+            >
+              <Zap className="w-4 h-4 text-[#C59B27] group-hover:scale-110 transition" />
+              <span>تحديث جميع الأسعار (+{markupPercentage}%) بنقرة زر ⚡</span>
+            </button>
+          </div>
+        </div>
+      </div>
+
       {/* Search and Filters Bar */}
       <div className="bg-[#FFFFFF] p-4 rounded-2xl border border-[#D9C496]/50 shadow-sm space-y-3">
         <div className="flex flex-col md:flex-row gap-3">
@@ -648,8 +949,17 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
                     {/* Herb Info */}
                     <td className="py-3.5 px-4">
                       <div className="flex items-center gap-3">
-                        <div className="w-9 h-9 rounded-xl bg-[#FAF0D7] border border-[#E0D0AB] flex items-center justify-center font-bold text-[#785E21] shrink-0 text-sm">
-                          {herb.nameAr.charAt(0)}
+                        <div className="w-10 h-10 rounded-xl overflow-hidden bg-[#FAF0D7] border border-[#E0D0AB] flex items-center justify-center font-bold text-[#785E21] shrink-0 text-sm shadow-xs relative">
+                          {herb.imageUrl ? (
+                            <img
+                              src={herb.imageUrl}
+                              alt={herb.nameAr}
+                              referrerPolicy="no-referrer"
+                              className="w-full h-full object-cover"
+                            />
+                          ) : (
+                            <span>{herb.nameAr.charAt(0)}</span>
+                          )}
                         </div>
                         <div>
                           <div className="font-extrabold text-[#1A261F] flex items-center gap-2">
@@ -760,6 +1070,28 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
                             <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C59B27]" />
                           ) : (
                             <Sparkles className="w-3.5 h-3.5 text-[#C59B27]" />
+                          )}
+                        </button>
+
+                        {/* Quick Imagen Photo Generation Button */}
+                        <button
+                          onClick={() => handleGenerateSingleHerbImage(herb)}
+                          disabled={generatingImageHerbId === herb.id}
+                          title={
+                            herb.imageUrl
+                              ? "إعادة توليد صورة واقعية جديدة بتقنية Imagen"
+                              : "توليد صورة واقعية للعشبة بتقنية Imagen"
+                          }
+                          className={`p-2 rounded-xl transition active:scale-95 disabled:opacity-50 border ${
+                            herb.imageUrl
+                              ? "bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border-emerald-300"
+                              : "bg-[#FAF0D7] hover:bg-[#F2E1B6] text-[#785E21] border-[#D9C496]"
+                          }`}
+                        >
+                          {generatingImageHerbId === herb.id ? (
+                            <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C59B27]" />
+                          ) : (
+                            <ImageIcon className="w-3.5 h-3.5 text-[#C59B27]" />
                           )}
                         </button>
 
@@ -997,6 +1329,71 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
                   className="w-full px-3 py-2 rounded-xl border border-[#D9C496] bg-white focus:outline-none focus:ring-2 focus:ring-[#C59B27] text-xs"
                 />
               </div>
+
+              {/* Herb Realistic Image (Imagen) */}
+              <div>
+                <label className="block text-[#473B1C] mb-1">
+                  صورة واقعية للمنتج (تقنية Imagen الذكية)
+                </label>
+                <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#FAF7EE] p-3 rounded-2xl border border-[#D9C496]">
+                  {/* Image Preview Box */}
+                  <div className="w-24 h-24 rounded-xl overflow-hidden border border-[#D9C496] bg-white flex items-center justify-center shrink-0">
+                    {newHerbImageUrl ? (
+                      <img
+                        src={newHerbImageUrl}
+                        alt="معاينة"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-center p-1 text-[#8C7A53]">
+                        <ImageIcon className="w-6 h-6 mx-auto mb-1 text-[#C59B27]" />
+                        <span className="text-[10px] block">لا توجد صورة</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2 w-full">
+                    <button
+                      type="button"
+                      onClick={handleGenerateNewHerbImage}
+                      disabled={isGeneratingNewHerbImage || !newHerbName.trim()}
+                      className="w-full bg-[#132B20] hover:bg-[#1C3E2F] text-[#F5DC7D] px-3 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
+                    >
+                      {isGeneratingNewHerbImage ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C59B27]" />
+                          <span>جاري توليد الصورة الواقعية بواسطة Imagen...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 text-[#C59B27]" />
+                          <span>توليد صورة واقعية للعشبة (Imagen)</span>
+                        </>
+                      )}
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={newHerbImageUrl}
+                        onChange={(e) => setNewHerbImageUrl(e.target.value)}
+                        placeholder="أو ألصق رابط صورة العشبة هنا..."
+                        className="w-full text-[11px] px-2.5 py-1.5 rounded-lg border border-[#D9C496] bg-white"
+                      />
+                      {newHerbImageUrl && (
+                        <button
+                          type="button"
+                          onClick={() => setNewHerbImageUrl("")}
+                          className="text-xs text-rose-600 font-bold hover:underline shrink-0"
+                        >
+                          إزالة
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#D9C496]">
@@ -1122,6 +1519,78 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
                   onChange={(e) => setHerbToEdit({ ...herbToEdit, dose: e.target.value })}
                   className="w-full px-3 py-2 rounded-xl border border-[#D9C496] bg-white text-xs"
                 />
+              </div>
+
+              {/* Realistic Imagen Image */}
+              <div>
+                <label className="block text-[#473B1C] mb-1">
+                  صورة المنتج الواقعية (تقنية Imagen)
+                </label>
+                <div className="flex flex-col sm:flex-row items-center gap-3 bg-[#FAF7EE] p-3 rounded-2xl border border-[#D9C496]">
+                  <div className="w-24 h-24 rounded-xl overflow-hidden border border-[#D9C496] bg-white flex items-center justify-center shrink-0">
+                    {herbToEdit.imageUrl ? (
+                      <img
+                        src={herbToEdit.imageUrl}
+                        alt="معاينة"
+                        referrerPolicy="no-referrer"
+                        className="w-full h-full object-cover"
+                      />
+                    ) : (
+                      <div className="text-center p-1 text-[#8C7A53]">
+                        <ImageIcon className="w-6 h-6 mx-auto mb-1 text-[#C59B27]" />
+                        <span className="text-[10px] block">لا توجد صورة</span>
+                      </div>
+                    )}
+                  </div>
+
+                  <div className="flex-1 space-y-2 w-full">
+                    <button
+                      type="button"
+                      onClick={handleGenerateEditHerbImage}
+                      disabled={isGeneratingEditImage}
+                      className="w-full bg-[#132B20] hover:bg-[#1C3E2F] text-[#F5DC7D] px-3 py-2 rounded-xl font-bold text-xs flex items-center justify-center gap-2 transition disabled:opacity-50"
+                    >
+                      {isGeneratingEditImage ? (
+                        <>
+                          <RefreshCw className="w-3.5 h-3.5 animate-spin text-[#C59B27]" />
+                          <span>جاري توليد صورة واقعية بواسطة Imagen...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Sparkles className="w-3.5 h-3.5 text-[#C59B27]" />
+                          <span>
+                            {herbToEdit.imageUrl
+                              ? "إعادة توليد صورة واقعية جديدة (Imagen)"
+                              : "توليد صورة واقعية للعشبة (Imagen)"}
+                          </span>
+                        </>
+                      )}
+                    </button>
+
+                    <div className="flex items-center gap-2">
+                      <input
+                        type="text"
+                        value={herbToEdit.imageUrl || ""}
+                        onChange={(e) =>
+                          setHerbToEdit({ ...herbToEdit, imageUrl: e.target.value })
+                        }
+                        placeholder="أو ألصق رابط صورة العشبة هنا..."
+                        className="w-full text-[11px] px-2.5 py-1.5 rounded-lg border border-[#D9C496] bg-white"
+                      />
+                      {herbToEdit.imageUrl && (
+                        <button
+                          type="button"
+                          onClick={() =>
+                            setHerbToEdit({ ...herbToEdit, imageUrl: undefined })
+                          }
+                          className="text-xs text-rose-600 font-bold hover:underline shrink-0"
+                        >
+                          إزالة
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                </div>
               </div>
             </div>
 
@@ -1272,6 +1741,31 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
                   className="w-full px-3 py-2 rounded-xl border border-[#D9C496] bg-white font-black"
                 />
               </div>
+
+              <div>
+                <label className="block text-[#473B1C] mb-1">
+                  هامش الربح التلقائي الافتراضي (%)
+                </label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="number"
+                    min="0"
+                    max="500"
+                    value={tempConfig.markupPercentage ?? 25}
+                    onChange={(e) =>
+                      setTempConfig({
+                        ...tempConfig,
+                        markupPercentage: Number(e.target.value),
+                      })
+                    }
+                    className="w-full px-3 py-2 rounded-xl border border-[#D9C496] bg-white text-center font-black"
+                  />
+                  <span className="font-extrabold text-[#785E21]">%</span>
+                </div>
+                <p className="text-[11px] text-[#785E21] mt-1 font-normal">
+                  يتم اعتماده وتطبيقه تلقائياً عند استيراد أي أصناف جديدة من Google Sheets.
+                </p>
+              </div>
             </div>
 
             <div className="flex items-center justify-end gap-2 pt-3 border-t border-[#D9C496]">
@@ -1286,13 +1780,232 @@ export const StoreAdminTab: React.FC<StoreAdminTabProps> = ({
                 type="button"
                 onClick={() => {
                   onUpdateStoreConfig(tempConfig);
+                  if (typeof tempConfig.markupPercentage === "number") {
+                    setMarkupPercentage(tempConfig.markupPercentage);
+                  }
                   setShowConfigModal(false);
-                  setSavedPriceNotice("تم تحديث إعدادات المتجر والواتساب بنجاح!");
+                  setSavedPriceNotice("تم تحديث إعدادات المتجر وهامش الربح بنجاح!");
                   setTimeout(() => setSavedPriceNotice(null), 3000);
                 }}
                 className="bg-[#C59B27] text-[#132B20] px-5 py-2 rounded-xl font-black text-xs shadow-md"
               >
                 حفظ الإعدادات
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* MODAL: One-Click Bulk Markup & Price Update */}
+      {showBulkMarkupModal && (
+        <div className="fixed inset-0 z-50 bg-black/70 backdrop-blur-sm flex items-center justify-center p-4">
+          <div className="bg-[#FAF4E6] rounded-3xl border-2 border-[#C59B27] max-w-xl w-full p-6 space-y-5 shadow-2xl relative animate-in fade-in zoom-in-95 max-h-[92vh] overflow-y-auto">
+            {/* Modal Header */}
+            <div className="flex items-center justify-between border-b border-[#D9C496] pb-3">
+              <div className="flex items-center gap-3">
+                <div className="w-10 h-10 rounded-2xl bg-[#132B20] text-[#F5DC7D] border border-[#C59B27] flex items-center justify-center shrink-0">
+                  <TrendingUp className="w-5 h-5 text-[#C59B27]" />
+                </div>
+                <div>
+                  <h3 className="text-base sm:text-lg font-black text-[#132B20]">
+                    تطبيق هامش الربح على جميع المنتجات بنقرة زر
+                  </h3>
+                  <p className="text-[11px] text-[#785E21]">
+                    تحديث شامل وفوري لأسعار كافة الأعشاب وباقاتها المتنوعة
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setShowBulkMarkupModal(false)}
+                className="text-[#785E21] hover:text-[#132B20] p-1.5 rounded-xl hover:bg-[#EFE7D5]"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Current Settings & Margin Tuning */}
+            <div className="bg-[#FFFDF8] border border-[#D9C496] rounded-2xl p-4 space-y-3">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                <label className="text-xs sm:text-sm font-extrabold text-[#132B20] flex items-center gap-1.5">
+                  <Percent className="w-4 h-4 text-[#C59B27]" />
+                  <span>نسبة هامش الربح المراد تطبيقها:</span>
+                </label>
+                <div className="flex items-center gap-1.5">
+                  {[15, 20, 25, 30, 50].map((p) => (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setMarkupPercentage(p)}
+                      className={`px-2 py-1 rounded-lg text-xs font-black transition ${
+                        markupPercentage === p
+                          ? "bg-[#C59B27] text-[#132B20] shadow-sm font-black"
+                          : "bg-[#FAF7EE] text-[#55472A] border border-[#D9C496]/60"
+                      }`}
+                    >
+                      +{p}%
+                    </button>
+                  ))}
+                  <div className="relative w-16">
+                    <input
+                      type="number"
+                      min="0"
+                      max="500"
+                      value={markupPercentage}
+                      onChange={(e) => setMarkupPercentage(Number(e.target.value))}
+                      className="w-full text-center px-1 py-1 rounded-lg border border-[#D9C496] bg-white text-xs font-black text-[#132B20]"
+                    />
+                    <span className="absolute left-1.5 top-1/2 -translate-y-1/2 text-[10px] font-bold text-[#888] pointer-events-none">
+                      %
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Target Scope */}
+              <div className="pt-2 border-t border-[#D9C496]/50">
+                <span className="text-xs font-bold text-[#473B1C] block mb-2">
+                  نطاق التطبيق:
+                </span>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 text-xs font-bold">
+                  <label
+                    className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition ${
+                      markupScope === "all"
+                        ? "bg-[#FAF2DF] border-[#C59B27] text-[#132B20]"
+                        : "bg-white border-[#D9C496] text-[#55472A]"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="scope"
+                      checked={markupScope === "all"}
+                      onChange={() => setMarkupScope("all")}
+                      className="text-[#C59B27] focus:ring-[#C59B27]"
+                    />
+                    <span>كافة الأعشاب في المتجر ({herbs.length} صنف)</span>
+                  </label>
+                  <label
+                    className={`flex items-center gap-2 p-2.5 rounded-xl border cursor-pointer transition ${
+                      markupScope === "importedOnly"
+                        ? "bg-[#FAF2DF] border-[#C59B27] text-[#132B20]"
+                        : "bg-white border-[#D9C496] text-[#55472A]"
+                    }`}
+                  >
+                    <input
+                      type="radio"
+                      name="scope"
+                      checked={markupScope === "importedOnly"}
+                      onChange={() => setMarkupScope("importedOnly")}
+                      className="text-[#C59B27] focus:ring-[#C59B27]"
+                    />
+                    <span>
+                      المستوردة فقط (
+                      {
+                        herbs.filter(
+                          (h) =>
+                            h.isCustom ||
+                            String(h.id).startsWith("sheet_") ||
+                            String(h.id).startsWith("sheet-")
+                        ).length
+                      }{" "}
+                      صنف)
+                    </span>
+                  </label>
+                </div>
+              </div>
+            </div>
+
+            {/* Smart Pricing Options */}
+            <div className="space-y-2 text-xs font-bold text-[#473B1C]">
+              <label className="flex items-center gap-2 cursor-pointer bg-white p-2.5 rounded-xl border border-[#D9C496]">
+                <input
+                  type="checkbox"
+                  checked={roundToNearestRiyal}
+                  onChange={(e) => setRoundToNearestRiyal(e.target.checked)}
+                  className="rounded text-[#C59B27] focus:ring-[#C59B27] w-4 h-4"
+                />
+                <span>
+                  تقريب الأسعار الناتجة إلى أقرب ريال صحيح (مستحسن للبيع السلس وتجنب الكسور)
+                </span>
+              </label>
+
+              <label className="flex items-center gap-2 cursor-pointer bg-white p-2.5 rounded-xl border border-[#D9C496]">
+                <input
+                  type="checkbox"
+                  checked={updatePackagesProportionally}
+                  onChange={(e) => setUpdatePackagesProportionally(e.target.checked)}
+                  className="rounded text-[#C59B27] focus:ring-[#C59B27] w-4 h-4"
+                />
+                <span>
+                  إعادة احتساب باقات الأوزان الـ 4 لكل عشب (100جم، 250جم، 500جم، 50مل) بتناسب كامل مع السعر الجديد
+                </span>
+              </label>
+            </div>
+
+            {/* Live Pricing Preview Sample */}
+            <div className="space-y-2">
+              <div className="flex items-center justify-between text-xs font-extrabold text-[#132B20]">
+                <span>معاينة حية لتغير الأسعار (عينات من المنتجات):</span>
+                <span className="text-[11px] text-[#785E21]">
+                  هامش: +{markupPercentage}%
+                </span>
+              </div>
+              <div className="bg-white rounded-2xl border border-[#D9C496] overflow-hidden">
+                <div className="grid grid-cols-4 bg-[#F5ECE0] p-2 text-[11px] font-black text-[#55472A] border-b border-[#D9C496]">
+                  <div>اسم العشبة</div>
+                  <div className="text-center">السعر الحالي</div>
+                  <div className="text-center">السعر بعد الهامش</div>
+                  <div className="text-left pl-2">الزيادة</div>
+                </div>
+                <div className="divide-y divide-[#EFE7D5] text-xs font-bold">
+                  {previewSampleHerbs.map((item) => {
+                    const curPrice = item.price && item.price > 0 ? item.price : 45;
+                    const rawNew = curPrice * (1 + markupPercentage / 100);
+                    const newPrice = roundToNearestRiyal
+                      ? Math.round(rawNew)
+                      : Number(rawNew.toFixed(2));
+                    const diff = newPrice - curPrice;
+                    return (
+                      <div key={item.id} className="grid grid-cols-4 p-2.5 items-center">
+                        <div className="font-bold text-[#132B20] truncate">
+                          {item.nameAr}
+                        </div>
+                        <div className="text-center text-[#785E21]">
+                          {curPrice} {storeConfig.currency}
+                        </div>
+                        <div className="text-center font-black text-emerald-700">
+                          {newPrice} {storeConfig.currency}
+                        </div>
+                        <div className="text-left pl-2 font-black text-[#C59B27]">
+                          +{diff} {storeConfig.currency}
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex items-center justify-between pt-3 border-t border-[#D9C496]">
+              <button
+                type="button"
+                onClick={() => setShowBulkMarkupModal(false)}
+                className="bg-[#EFE7D5] hover:bg-[#E5D7B7] text-[#55472A] px-4 py-2 rounded-xl font-bold text-xs"
+              >
+                إلغاء
+              </button>
+              <button
+                type="button"
+                disabled={isApplyingBulkMarkup}
+                onClick={handleExecuteBulkMarkup}
+                className="bg-gradient-to-r from-[#132B20] to-[#1A382B] hover:from-[#1A382B] hover:to-[#244A3A] text-[#F5DC7D] hover:text-white border-2 border-[#C59B27] px-6 py-2.5 rounded-xl font-black text-xs sm:text-sm shadow-lg flex items-center gap-2 active:scale-95 transition"
+              >
+                <Zap className="w-4 h-4 text-[#C59B27]" />
+                <span>
+                  {isApplyingBulkMarkup
+                    ? "جاري التحديث..."
+                    : `تأكيد وتطبيق الهامش على كافة الأعشاب الآن 🚀`}
+                </span>
               </button>
             </div>
           </div>

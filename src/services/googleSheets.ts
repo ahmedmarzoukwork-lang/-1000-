@@ -205,7 +205,8 @@ export async function appendHerbsToExistingSheet(
  */
 export async function importHerbsFromSheets(
   accessToken: string,
-  spreadsheetId: string
+  spreadsheetId: string,
+  markupPercentage?: number
 ): Promise<HerbItem[]> {
   const metaRes = await fetch(
     `https://sheets.googleapis.com/v4/spreadsheets/${spreadsheetId}?fields=sheets.properties`,
@@ -250,6 +251,24 @@ export async function importHerbsFromSheets(
     if (!row || row.length === 0 || !row[1]) continue;
 
     const rawPrice = row[16] ? parseFloat(row[16]) : undefined;
+    let finalPrice: number | undefined = undefined;
+    if (rawPrice && !isNaN(rawPrice) && rawPrice > 0) {
+      if (typeof markupPercentage === "number" && markupPercentage !== 0) {
+        finalPrice = Math.max(1, Math.round(rawPrice * (1 + markupPercentage / 100)));
+      } else {
+        finalPrice = Math.round(rawPrice);
+      }
+    }
+
+    const packageOptions = finalPrice
+      ? [
+          { label: "عبوة 100 جم (عشب عضوي نقي)", price: finalPrice },
+          { label: "عبوة 250 جم (توفيرية ممتازة)", price: Math.round(finalPrice * 2.2) },
+          { label: "عبوة 500 جم (نصف كيلو فاخر)", price: Math.round(finalPrice * 4.1) },
+          { label: "خلاصة مركزة (قطارة صيدلانية 50 مل)", price: Math.round(finalPrice * 1.6) },
+        ]
+      : undefined;
+
     const herb: HerbItem = {
       id: row[0] && String(row[0]).trim() !== "" ? String(row[0]).trim() : `sheet_${Date.now()}_${i}`,
       nameAr: row[1] || "",
@@ -267,7 +286,8 @@ export async function importHerbsFromSheets(
       interactions: row[13] || "",
       historicalNote: row[14] || "",
       references: row[15] || "تم الاستيراد من Google Sheets",
-      price: rawPrice && !isNaN(rawPrice) && rawPrice > 0 ? Math.round(rawPrice) : undefined,
+      price: finalPrice,
+      packageOptions,
       description: row[17] || undefined,
       pharmacology: row[18] || undefined,
       isCustom: true,

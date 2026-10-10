@@ -24,6 +24,7 @@ export interface HerbItem {
   price?: number; // السعر الأساسي للعبوة القياسية
   inStock?: boolean; // توفر المنتج في العطارة
   packageOptions?: { label: string; price: number }[];
+  imageUrl?: string; // رابط أو صورة واقعية عالية الدقة للعشبة مولدة بتقنية الذكاء الاصطناعي (Imagen)
 }
 
 export type ViewTab = "catalog" | "store" | "store-admin" | "add-ai" | "comparison" | "checker" | "advisor" | "backup";
@@ -54,6 +55,7 @@ export interface StoreConfig {
   currency: string;
   freeShippingThreshold: number;
   shippingFee: number;
+  markupPercentage?: number; // هامش الربح التلقائي بالنسبة المئوية (مثل 20% أو 25%)
 }
 
 export interface DrugCheckResult {
